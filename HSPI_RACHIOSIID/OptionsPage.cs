@@ -8,11 +8,18 @@ using System.Text;
 using System.Web;
 using Scheduler;
 using System.Xml.Linq;
+using System.IO;
+using System.Security.Cryptography;
+using System.Net;
+using HSPI_RACHIOSIID.Models;
 
 namespace HSPI_RACHIOSIID
 {
     public class OptionsPage : PageBuilderAndMenu.clsPageBuilder
     {
+
+        
+        private const string apiKey = "4ece59af-453c-49d6-b07b-f8008427f9ae";
 
         public OptionsPage(string pagename) : base(pagename)
         {
@@ -20,68 +27,25 @@ namespace HSPI_RACHIOSIID
 
         public override string postBackProc(string page, string data, string user, int userRights)
         {
-            Console.WriteLine(Util.IFACE_NAME + " Status/Options post: " + data);
-            try
+            System.Collections.Specialized.NameValueCollection parts = null;
+            parts = HttpUtility.ParseQueryString(data);
+
+            Console.WriteLine("boop");
+
+            if (parts["id"] == "tokentb")
             {
-                System.Collections.Specialized.NameValueCollection parts = null;
-                parts = HttpUtility.ParseQueryString(data);
-                if (parts["uploadfile"] == "true")
-                {
-                    // handle uploading of file
-                    // the orig file is ID_OriginalFile
-                    // the temp file is ID_TempFile
-                    // status is ID_Status
-                    // return the proper JSON so the uploader completes
-                    // success return=Return "{""success"":""true""}"
-                    // if error return=Return "{""error"":""No directory specified""}"
-                    return "{\"success\":\"true\"}";
-                }
-
-                string id = parts["id"];
-                if (id == "btimerstop")
-                {
-                    this.pageCommands.Add("stoptimer", "");
-                }
-                if (id == "btimerstart")
-                {
-                    this.pageCommands.Add("starttimer", "");
-                }
-                if (id == "sradd")
-                {
-                    this.propertySet.Add("my_region", "appenddiv=<br>" + System.DateTime.Now.ToString() + ":added this to the scrolling region value=0 added this to the scrolling region added this to the scrolling region added this to the scrolling region added this to the scrolling region added this to the scrolling region added this to the scrolling region");
-                }
-                if (id == "spbut")
-                {
-                    this.pageCommands.Add("stopspinner", "spin");
-                }
-                if (id == "butOpenSlide")
-                {
-                    this.pageCommands.Add("slidingtabopen", "myslide1");
-                }
-                if (id == "butCloseSlide")
-                {
-                    this.pageCommands.Add("slidingtabclose", "myslide1");
-                }
-                if (id == "myslide1_ID")
-                {
-                    //Me.pageCommands.Add("refresh", True)
-                }
-
-
-
-                if (id == "b111")
-                {
-                    this.divToUpdate.Add("myslide1_ID_content", "new stuff for the tab");
-                }
-
-                return base.postBackProc(page, data, user, userRights);
+                Console.WriteLine("new api token");
             }
-            catch (Exception ex)
+            if (parts[""] == "")
             {
-                Console.WriteLine("Error Status/Options postback: " + ex.Message);
+
             }
-            return "";
+
+            return base.postBackProc(page, data, user, userRights);
         }
+
+
+
 
         public string GetPagePlugin(string pageName, string user, int userRights, string queryString)
         {
@@ -131,7 +95,7 @@ namespace HSPI_RACHIOSIID
                 //Dim CS As CAPIStatus
                 //CS = dv.GetStatus
 
-
+                pluginSB.Append("<script>");
                 // Status/Options Tabs
                 pluginSB.Append("<hr>RachioSIID Status/Options<br><br>");
                 clsJQuery.jqTabs jqtabs = new clsJQuery.jqTabs("optionsTab", this.PageName);
@@ -158,18 +122,19 @@ namespace HSPI_RACHIOSIID
                 optionsString.Append("<table id='optionstable'>");
 
                 // Rachio API Access Token
-                optionsString.Append("<tr><td class='header'>Rachio API Access Token</td></tr>");
+                optionsString.Append("<tr><td class='header' colspan='2'>Rachio API Access Token</td></tr>");
                 optionsString.Append("<tr><td>API Access Token</td>");
                 optionsString.Append("<td>");
-                clsJQuery.jqTextBox tokenTextBox = new clsJQuery.jqTextBox("tokentb", "text", "", this.PageName, 30, true);
+                clsJQuery.jqTextBox tokenTextBox = new clsJQuery.jqTextBox("tokentb", "text", "", this.PageName, 30, false);
                 tokenTextBox.promptText = "Enter your Rachio API access token.";
                 tokenTextBox.toolTip = "Access Token";
-                tokenTextBox.dialogWidth = 500;
+                tokenTextBox.dialogWidth = 600;
+                tokenTextBox.editable = true;
                 optionsString.Append(tokenTextBox.Build());
                 optionsString.Append("</td></tr>");
 
                 // Rachio Options
-                optionsString.Append("<tr><td class='header'>Rachio Options</td></tr>");
+                optionsString.Append("<tr><td class='header' colspan='2'>Rachio Options</td></tr>");
                 
                 optionsString.Append("<tr><td>Unit Type</td>");
                 optionsString.Append("<td>");
@@ -198,7 +163,7 @@ namespace HSPI_RACHIOSIID
                 optionsString.Append("</td></tr>");
 
                 // Homeseer Device Options
-                optionsString.Append("<tr><td class='header'>Homeseer Device Options</td></tr>");
+                optionsString.Append("<tr><td class='header' colspan='2'>Homeseer Device Options</td></tr>");
 
                 optionsString.Append("<tr><td>Forecast Days</td>");
                 optionsString.Append("<td>");
@@ -230,7 +195,7 @@ namespace HSPI_RACHIOSIID
 
                 // Web Page Access
 
-                optionsString.Append("<tr><td class='header'>Web Page Access</td></tr>");
+                optionsString.Append("<tr><td class='header' colspan='2'>Web Page Access</td></tr>");
 
                 optionsString.Append("<tr><td>Forecast Days</td>");
                 optionsString.Append("<td>");
@@ -241,7 +206,8 @@ namespace HSPI_RACHIOSIID
                 optionsString.Append(guestCheck.Build());
 
                 clsJQuery.jqCheckBox adminCheck = new clsJQuery.jqCheckBox("adminCheck", "Admin", this.PageName, true, false);
-                adminCheck.@checked = false;
+                adminCheck.@checked = true;
+                adminCheck.enabled = false;
                 optionsString.Append(adminCheck.Build());
 
                 clsJQuery.jqCheckBox normalCheck = new clsJQuery.jqCheckBox("normalCheck", "Normal", this.PageName, true, false);
@@ -255,7 +221,7 @@ namespace HSPI_RACHIOSIID
                 optionsString.Append("</td></tr>");
 
                 // Applications Options
-                optionsString.Append("<tr><td class='header'>Applications Options</td></tr>");
+                optionsString.Append("<tr><td class='header' colspan='2'>Applications Options</td></tr>");
                 optionsString.Append("<tr><td>Logging Level</td>");
                 optionsString.Append("<td>");
                 dl.toolTip = "Specifies the plugin logging level";
@@ -276,10 +242,14 @@ namespace HSPI_RACHIOSIID
 
                 optionsString.Append("</table>");
 
+                
+
                 tab.tabContent = optionsString.ToString();
                 jqtabs.tabs.Add(tab);
 
-                pluginSB.Append(jqtabs.Build());              
+                pluginSB.Append(jqtabs.Build());
+
+                pluginSB.Append("<script>");
 
 
                 // container test
