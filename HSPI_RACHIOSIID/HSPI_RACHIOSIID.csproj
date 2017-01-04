@@ -68,8 +68,6 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Util.cs" />
-    <Compile Include="WebAddDevice.cs" />
-    <Compile Include="WebPage.cs" />
     <Compile Include="OptionsPage.cs" />
     <Compile Include="Web_UI_Util.cs" />
   </ItemGroup>

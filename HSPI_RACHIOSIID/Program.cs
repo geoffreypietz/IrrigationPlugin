@@ -1,23 +1,16 @@
-﻿using Microsoft.VisualBasic;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
-using Scheduler;
+﻿using System;
 using HomeSeerAPI;
 
 using HSCF.Communication.Scs.Communication.EndPoints.Tcp;
 using HSCF.Communication.ScsServices.Client;
-using HSCF.Communication.ScsServices.Service;
 
 namespace HSPI_RACHIOSIID
 {
     class Program
     {
-        private static HSCF.Communication.ScsServices.Client.IScsServiceClient<IHSApplication> withEventsField_client;
+        private static IScsServiceClient<IHSApplication> withEventsField_client;
         private static IAppCallbackAPI callback;
-        public static HSCF.Communication.ScsServices.Client.IScsServiceClient<IHSApplication> client
+        public static IScsServiceClient<IHSApplication> client
         {
             get { return withEventsField_client; }
             set
@@ -34,8 +27,8 @@ namespace HSPI_RACHIOSIID
             }
         }
 
-        static HSCF.Communication.ScsServices.Client.IScsServiceClient<IAppCallbackAPI> clientCallback;
-        private static HomeSeerAPI.IHSApplication host;
+        static IScsServiceClient<IAppCallbackAPI> clientCallback;
+        private static IHSApplication host;
         
         public static HSPI plugin = new HSPI();
 
@@ -48,7 +41,7 @@ namespace HSPI_RACHIOSIID
             foreach (string serverCmd_loopVariable in args)
             {
                 serverCmd = serverCmd_loopVariable;
-                Console.WriteLine("Does it ever reach here?");
+                
                 string[] ch = new string[1];
                 ch[0] = "=";
                 string[] parts = serverCmd.Split(ch, StringSplitOptions.None);
