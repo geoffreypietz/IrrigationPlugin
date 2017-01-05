@@ -140,13 +140,14 @@ namespace HSPI_RACHIOSIID
 		private void start_test_timer()
 		{
 			test_timer.Elapsed += test_timer_Elapsed;
-			test_timer.Interval = 60000 * 5;//TODO this is set at 30 sec update time, should slow it down, or just get rid of this
+			test_timer.Interval = 60000 * pluginpage.updateInterval; // 1 min * Options update frequency
 			test_timer.Enabled = true;
 		}
 		private double timerVal;
 		private void test_timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)//TODO maybe don't auto update and only update when value is changed
 		{
 			timerVal += 1;
+            pluginpage.updateCount++;
 			updateStatusValues();
 		}
 		#endregion

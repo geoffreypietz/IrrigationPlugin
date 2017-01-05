@@ -18,11 +18,19 @@ namespace HSPI_RACHIOSIID
     public class OptionsPage : PageBuilderAndMenu.clsPageBuilder
     {
 
-        
-        private const string apiKey = "4ece59af-453c-49d6-b07b-f8008427f9ae";
+        public string apiKey { get; set; }
+        public string unitType { get; set; }
+        public int updateInterval { get; set; }
+        public int forecastDays { get; set; }
+        public bool deviceImage { get; set; }
+        public int accessLevel { get; set; }
+        public string loggingLevel { get; set; }
+        public int updateCount { get; set; }
+        public int updateSuccess { get; set; }
 
         public OptionsPage(string pagename) : base(pagename)
         {
+            updateInterval = 1;
         }
 
         public override string postBackProc(string page, string data, string user, int userRights)
@@ -95,7 +103,6 @@ namespace HSPI_RACHIOSIID
                 //Dim CS As CAPIStatus
                 //CS = dv.GetStatus
 
-                pluginSB.Append("<script>");
                 // Status/Options Tabs
                 pluginSB.Append("<hr>RachioSIID Status/Options<br><br>");
                 clsJQuery.jqTabs jqtabs = new clsJQuery.jqTabs("optionsTab", this.PageName);
@@ -125,11 +132,10 @@ namespace HSPI_RACHIOSIID
                 optionsString.Append("<tr><td class='header' colspan='2'>Rachio API Access Token</td></tr>");
                 optionsString.Append("<tr><td>API Access Token</td>");
                 optionsString.Append("<td>");
-                clsJQuery.jqTextBox tokenTextBox = new clsJQuery.jqTextBox("tokentb", "text", "", this.PageName, 30, false);
+                clsJQuery.jqTextBox tokenTextBox = new clsJQuery.jqTextBox("tokentb", "text", "", this.PageName, 30, true);
                 tokenTextBox.promptText = "Enter your Rachio API access token.";
                 tokenTextBox.toolTip = "Access Token";
                 tokenTextBox.dialogWidth = 600;
-                tokenTextBox.editable = true;
                 optionsString.Append(tokenTextBox.Build());
                 optionsString.Append("</td></tr>");
 
@@ -249,7 +255,7 @@ namespace HSPI_RACHIOSIID
 
                 pluginSB.Append(jqtabs.Build());
 
-                pluginSB.Append("<script>");
+
 
 
                 // container test
