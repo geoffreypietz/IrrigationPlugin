@@ -1,8 +1,15 @@
-﻿using System;
+﻿using Microsoft.VisualBasic;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Data;
+using System.Diagnostics;
+using Scheduler;
 using HomeSeerAPI;
 
 using HSCF.Communication.Scs.Communication.EndPoints.Tcp;
 using HSCF.Communication.ScsServices.Client;
+using HSCF.Communication.ScsServices.Service;
 
 namespace HSPI_RACHIOSIID
 {
@@ -28,8 +35,8 @@ namespace HSPI_RACHIOSIID
         }
 
         static IScsServiceClient<IAppCallbackAPI> clientCallback;
-        private static IHSApplication host;
-        
+        private static HomeSeerAPI.IHSApplication host;
+        // real plugin functions, user supplied
         public static HSPI plugin = new HSPI();
 
 
@@ -41,7 +48,6 @@ namespace HSPI_RACHIOSIID
             foreach (string serverCmd_loopVariable in args)
             {
                 serverCmd = serverCmd_loopVariable;
-                
                 string[] ch = new string[1];
                 ch[0] = "=";
                 string[] parts = serverCmd.Split(ch, StringSplitOptions.None);

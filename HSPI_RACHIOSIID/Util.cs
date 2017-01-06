@@ -101,6 +101,7 @@ namespace HSPI_RACHIOSIID
         public static int MyTempDevice = -1;
         static internal void Find_Create_Devices()
         {
+            
             System.Collections.Generic.List<Scheduler.Classes.DeviceClass> col = new System.Collections.Generic.List<Scheduler.Classes.DeviceClass>();
             Scheduler.Classes.DeviceClass dv = default(Scheduler.Classes.DeviceClass);
             bool Found = false;
@@ -175,8 +176,21 @@ namespace HSPI_RACHIOSIID
                     RachioConnection rc = new RachioConnection();
                     Person p = rc.getPerson();
                     int count = 0;
+                    Console.WriteLine("Creating Devices...");
+
+                    // ALL DEVICES
+                    dv.set_Location(hs, "Rachio_SIID");
+                    dv.set_Location2(hs, "Rachio_SIID");
+                    dv.MISC_Set(hs, Enums.dvMISC.SHOW_VALUES);
+                    dv.MISC_Set(hs, Enums.dvMISC.NO_LOG);
+                    //dv.MISC_Set(hs, Enums.dvMISC.STATUS_ONLY)      ' set this for a status only device, no controls, and do not include the DeviceVSP calls above
+                    //dv.MISC_Set(hs,Enums.dvMISC.HIDDEN);
+                    dv.set_Status_Support(hs, true);
+
+                    // ZONES
                     foreach (Zone z in p.devices[0].zones)
                     {
+                        //Zone Root
                         dvRef = hs.NewDeviceRef(z.name);
                         MyDevice = dvRef; //for auto update
                         if (dvRef > 0)
@@ -185,7 +199,7 @@ namespace HSPI_RACHIOSIID
                             dv = (Scheduler.Classes.DeviceClass)hs.GetDeviceByRef(dvRef);
                             dv.set_Address(hs, "HOME");
                             //dv.Can_Dim(hs, True
-                            dv.set_Device_Type_String(hs, "Rachio Irrigation Local Override Zone " + z.zoneNumber);
+                            dv.set_Device_Type_String(hs, "Rachio Zone" + z.zoneNumber + " Root");
                             DeviceTypeInfo_m.DeviceTypeInfo DT = new DeviceTypeInfo_m.DeviceTypeInfo();
                             DT.Device_API = DeviceTypeInfo_m.DeviceTypeInfo.eDeviceAPI.Plug_In;
                             DT.Device_Type = 71;
@@ -193,15 +207,36 @@ namespace HSPI_RACHIOSIID
                             dv.set_DeviceType_Set(hs, DT);
                             dv.set_Interface(hs, IFACE_NAME);
                             dv.set_InterfaceInstance(hs, "");
-                            dv.set_Last_Change(hs, new DateTime(1929, 5, 21, 11, 0, 0));
-                            dv.set_Location(hs, "Irrigation");
-                            dv.set_Location2(hs, "Outside");
+                            dv.set_Last_Change(hs, new DateTime());             
+                        }
+                        count++;
+
+                        //Zone Control
+                        dvRef = hs.NewDeviceRef(z.name);
+                        MyDevice = dvRef; //for auto update
+                        if (dvRef > 0)
+                        {
+
+                            dv = (Scheduler.Classes.DeviceClass)hs.GetDeviceByRef(dvRef);
+                            dv.set_Address(hs, "HOME");
+                            //dv.Can_Dim(hs, True
+                            dv.set_Device_Type_String(hs, "Rachio Zone" + z.zoneNumber + " Control");
+                            DeviceTypeInfo_m.DeviceTypeInfo DT = new DeviceTypeInfo_m.DeviceTypeInfo();
+                            DT.Device_API = DeviceTypeInfo_m.DeviceTypeInfo.eDeviceAPI.Plug_In;
+                            DT.Device_Type = 71;
+                            DT.Device_SubType = z.zoneNumber;
+                            dv.set_DeviceType_Set(hs, DT);
+                            dv.set_Interface(hs, IFACE_NAME);
+                            dv.set_InterfaceInstance(hs, "");
+                            dv.set_Last_Change(hs, new DateTime());
+
+
 
                             VSVGPairs.VSPair Pair = default(VSVGPairs.VSPair);
                             // add values, will appear as a radio control and only allow one option to be selected at a time
                             Pair = new VSVGPairs.VSPair(ePairStatusControl.Both);
                             Pair.PairType = VSVGPairs.VSVGPairType.SingleValue;
-                            Pair.Render = Enums.CAPIControlType.Radio_Option;
+                            Pair.Render = Enums.CAPIControlType.List_Text_from_List;
                             Pair.Value = 0;
                             Pair.Status = "Value 0";
                             hs.DeviceVSP_AddPair(dvRef, Pair);
@@ -211,18 +246,97 @@ namespace HSPI_RACHIOSIID
                             Pair.Value = 2;
                             Pair.Status = "Value 2";
                             hs.DeviceVSP_AddPair(dvRef, Pair);
-                            Pair.Value = 3;
-                            Pair.Status = "Value 3";
-                            hs.DeviceVSP_AddPair(dvRef, Pair);
 
-                            dv.MISC_Set(hs, Enums.dvMISC.SHOW_VALUES);
-                            dv.MISC_Set(hs, Enums.dvMISC.NO_LOG);
-                            //dv.MISC_Set(hs, Enums.dvMISC.STATUS_ONLY)      ' set this for a status only device, no controls, and do not include the DeviceVSP calls above
-                            //dv.MISC_Set(hs,Enums.dvMISC.HIDDEN);
-                            dv.set_Status_Support(hs, true);
+
+                            
+                        }
+                        count++;
+
+                        // Zone Last Duration
+                        dvRef = hs.NewDeviceRef(z.name);
+                        MyDevice = dvRef; //for auto update
+                        if (dvRef > 0)
+                        {
+
+                            dv = (Scheduler.Classes.DeviceClass)hs.GetDeviceByRef(dvRef);
+                            dv.set_Address(hs, "HOME");
+                            //dv.Can_Dim(hs, True
+                            dv.set_Device_Type_String(hs, "Rachio Zone" + z.zoneNumber + " Last Duration");
+                            DeviceTypeInfo_m.DeviceTypeInfo DT = new DeviceTypeInfo_m.DeviceTypeInfo();
+                            DT.Device_API = DeviceTypeInfo_m.DeviceTypeInfo.eDeviceAPI.Plug_In;
+                            DT.Device_Type = 71;
+                            DT.Device_SubType = z.zoneNumber;
+                            dv.set_DeviceType_Set(hs, DT);
+                            dv.set_Interface(hs, IFACE_NAME);
+                            dv.set_InterfaceInstance(hs, "");
+                            dv.set_Last_Change(hs, new DateTime());
+                        }
+                        count++;
+
+                        // Zone Last Watered
+                        dvRef = hs.NewDeviceRef(z.name);
+                        MyDevice = dvRef; //for auto update
+                        if (dvRef > 0)
+                        {
+
+                            dv = (Scheduler.Classes.DeviceClass)hs.GetDeviceByRef(dvRef);
+                            dv.set_Address(hs, "HOME");
+                            //dv.Can_Dim(hs, True
+                            dv.set_Device_Type_String(hs, "Rachio Zone" + z.zoneNumber + " Last Watered");
+                            DeviceTypeInfo_m.DeviceTypeInfo DT = new DeviceTypeInfo_m.DeviceTypeInfo();
+                            DT.Device_API = DeviceTypeInfo_m.DeviceTypeInfo.eDeviceAPI.Plug_In;
+                            DT.Device_Type = 71;
+                            DT.Device_SubType = z.zoneNumber;
+                            dv.set_DeviceType_Set(hs, DT);
+                            dv.set_Interface(hs, IFACE_NAME);
+                            dv.set_InterfaceInstance(hs, "");
+                            dv.set_Last_Change(hs, new DateTime());
+                        }
+                        count++;
+
+                        // Zone Max Runtime
+                        dvRef = hs.NewDeviceRef(z.name);
+                        MyDevice = dvRef; //for auto update
+                        if (dvRef > 0)
+                        {
+
+                            dv = (Scheduler.Classes.DeviceClass)hs.GetDeviceByRef(dvRef);
+                            dv.set_Address(hs, "HOME");
+                            //dv.Can_Dim(hs, True
+                            dv.set_Device_Type_String(hs, "Rachio Zone" + z.zoneNumber + " Max Runtime");
+                            DeviceTypeInfo_m.DeviceTypeInfo DT = new DeviceTypeInfo_m.DeviceTypeInfo();
+                            DT.Device_API = DeviceTypeInfo_m.DeviceTypeInfo.eDeviceAPI.Plug_In;
+                            DT.Device_Type = 71;
+                            DT.Device_SubType = z.zoneNumber;
+                            dv.set_DeviceType_Set(hs, DT);
+                            dv.set_Interface(hs, IFACE_NAME);
+                            dv.set_InterfaceInstance(hs, "");
+                            dv.set_Last_Change(hs, new DateTime());
+                        }
+                        count++;
+
+                        // Zone Total Runtime
+                        dvRef = hs.NewDeviceRef(z.name);
+                        MyDevice = dvRef; //for auto update
+                        if (dvRef > 0)
+                        {
+
+                            dv = (Scheduler.Classes.DeviceClass)hs.GetDeviceByRef(dvRef);
+                            dv.set_Address(hs, "HOME");
+                            //dv.Can_Dim(hs, True
+                            dv.set_Device_Type_String(hs, "Rachio Zone" + z.zoneNumber + " Total Runtime");
+                            DeviceTypeInfo_m.DeviceTypeInfo DT = new DeviceTypeInfo_m.DeviceTypeInfo();
+                            DT.Device_API = DeviceTypeInfo_m.DeviceTypeInfo.eDeviceAPI.Plug_In;
+                            DT.Device_Type = 71;
+                            DT.Device_SubType = z.zoneNumber;
+                            dv.set_DeviceType_Set(hs, DT);
+                            dv.set_Interface(hs, IFACE_NAME);
+                            dv.set_InterfaceInstance(hs, "");
+                            dv.set_Last_Change(hs, new DateTime());
                         }
                         count++;
                     }
+                    
 
                 }
 
