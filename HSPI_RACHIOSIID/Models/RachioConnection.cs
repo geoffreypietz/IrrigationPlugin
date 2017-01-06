@@ -11,12 +11,12 @@ namespace HSPI_RACHIOSIID.Models
 {
     class RachioConnection
     {
-        private string APIKey;
+        public string APIKey;
         private string PersonID;
         private string DeviceID;
         public RachioConnection()
         {
-            string data = System.IO.File.ReadAllText("userprefs.txt");
+            string data = System.IO.File.ReadAllText(@"Data/hspi_rachiosiid/userprefs.txt");
             Login Login = getLoginInfo(data);
 
 

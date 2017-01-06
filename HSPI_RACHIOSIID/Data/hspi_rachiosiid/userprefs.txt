@@ -1,0 +1,12 @@
+{
+
+		"loggedIn" : true,
+		"username" : "",
+		"userId" : "",
+		"apiKey" : "",
+		"secretKey" : "",
+		"messaginAuthKey" : "",
+		"accessToken" : "8648ebf5-70cf-4e0b-9db1-c558a6034d18"
+
+	 
+}
