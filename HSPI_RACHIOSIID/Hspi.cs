@@ -44,7 +44,7 @@ namespace HSPI_RACHIOSIID
 			// Normally we would do a search on plug-in actions, triggers, devices, etc. for the string provided, using
 			//   the string as a regular expression if RegEx is True.
 			//
-		    List<SearchReturn> colRET = new List<SearchReturn>();
+			List<SearchReturn> colRET = new List<SearchReturn>();
 			SearchReturn RET;
 
 			//So let's pretend we searched through all of the plug-in resources (triggers, actions, web pages, perhaps zone names, songs, etc.) 
@@ -137,36 +137,55 @@ namespace HSPI_RACHIOSIID
 		}
 		#region - Timer
 		private System.Timers.Timer test_timer = new System.Timers.Timer();
-		private void start_test_timer()
+        private double timerVal = 0;
+        private void start_test_timer()
 		{
+			Console.WriteLine("Starting timer...");
+
+            
+
 			test_timer.Elapsed += test_timer_Elapsed;
-			test_timer.Interval = 60000 * pluginpage.updateInterval; // 1 min * Options update frequency
-			test_timer.Enabled = true;
+
+            
+            test_timer.Interval = 10000 * pluginpage.updateInterval; // 1 min * Options update frequency 
+            timerVal += 1;
+
+            test_timer.Enabled = true;
 		}
-		private double timerVal;
-		private void test_timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)//TODO maybe don't auto update and only update when value is changed
+		
+		private void test_timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
 		{
-			timerVal += 1;
-            pluginpage.updateCount++;
+			
+			pluginpage.updateCount++;
 			updateStatusValues();
 		}
 		#endregion
 		#region - UpdateUI
 		private void updateStatusValues()
 		{
+            if(Util.hs.DeviceCount == 0)
+            {
+                Util.Find_Create_Devices();
+            }
+
 			// increment our test value so we can see it change on the device and test triggers
 			// find our device, we only have one
 			Scheduler.Classes.DeviceClass dv = default(Scheduler.Classes.DeviceClass);
 			int dvRef = 0;
 			RachioConnection rachio = new RachioConnection();
-
-			try
+			
+            
+            try
 			{
 				Scheduler.Classes.clsDeviceEnumeration EN = default(Scheduler.Classes.clsDeviceEnumeration);
 				EN = (Scheduler.Classes.clsDeviceEnumeration)Util.hs.GetDeviceEnumerator();
 				if (EN == null)
-					throw new Exception(Util.IFACE_NAME + " failed to get a device enumerator from HomeSeer.");
-				do
+                {
+                 
+                    throw new Exception(Util.IFACE_NAME + " failed to get a device enumerator from HomeSeer.");
+                }
+                
+                do
 				{
 					dv = EN.GetNext();
 					if (dv == null)
@@ -195,7 +214,8 @@ namespace HSPI_RACHIOSIID
 			}
 			catch (Exception ex)
 			{
-				Util.hs.WriteLog(Util.IFACE_NAME + " Error", "Exception in Find_Create_Devices/Enumerator: " + ex.Message);
+                
+                Util.hs.WriteLog(Util.IFACE_NAME + " Error", "Exception in Find_Create_Devices/Enumerator: " + ex.Message);
 			}
 		}
 		#endregion
@@ -237,12 +257,13 @@ namespace HSPI_RACHIOSIID
 				{
 					Util.hs.RegisterPage(Util.IFACE_NAME + Util.Instance, Util.IFACE_NAME, Util.Instance);
 				}
+				Console.WriteLine("Creates options page...");
 				WebPageDesc wpd = new WebPageDesc();
 				// create test page
 
 
 				// register a normal page to appear in the HomeSeer menu
-				wpd = new WebPageDesc();
+
 				wpd.link = Util.IFACE_NAME + Util.Instance;
 				if (!string.IsNullOrEmpty(Util.Instance))
 				{
@@ -274,7 +295,7 @@ namespace HSPI_RACHIOSIID
 
 				start_test_timer();
 
-				Util.hs.SaveINISetting("Settings", "test", null, "hspi_HSTouch.ini");
+				//Util.hs.SaveINISetting("Settings", "test", null, "hspi_HSTouch.ini");
 
 				// example of how to save a file to the HS images folder, mainly for use by plugins that are running remotely, album art, etc.
 				//SaveImageFileToHS(gEXEPath & "\html\images\browser.png", "sample\browser.png")//TODO look here
@@ -667,6 +688,7 @@ namespace HSPI_RACHIOSIID
 
 			Util.colActs_Sync = new System.Collections.SortedList();
 			Util.colActs = System.Collections.SortedList.Synchronized(Util.colActs_Sync);
+			
 		}
 
 

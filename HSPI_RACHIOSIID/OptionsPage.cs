@@ -30,6 +30,7 @@ namespace HSPI_RACHIOSIID
 
         public OptionsPage(string pagename) : base(pagename)
         {
+            string data = System.IO.File.ReadAllText(@"Data/hspi_rachiosiid/userprefs.txt");
             updateInterval = 1;
         }
 
