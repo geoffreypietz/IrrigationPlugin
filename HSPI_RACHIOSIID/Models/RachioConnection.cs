@@ -16,8 +16,8 @@ namespace HSPI_RACHIOSIID.Models
         private string DeviceID;
         public RachioConnection()
         {
-            string data = System.IO.File.ReadAllText(@"Data/hspi_rachiosiid/userprefs.txt");
-            Login Login = getLoginInfo(data);
+            string userPrefs = System.IO.File.ReadAllText(@"Data/hspi_rachiosiid/userprefs.txt");
+            Login Login = getLoginInfo(userPrefs);
 
 
             if (Login.loggedIn) //POSSIBLE ISSUE
