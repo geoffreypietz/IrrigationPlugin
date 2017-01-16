@@ -163,6 +163,7 @@ namespace HSPI_RACHIOSIID
 		#region - UpdateUI
 		private void updateStatusValues()
 		{
+            
             if(Util.hs.DeviceCount == 0)
             {
                 Util.Find_Create_Devices();
