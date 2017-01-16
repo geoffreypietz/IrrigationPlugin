@@ -22,7 +22,7 @@ namespace HSPI_RACHIOSIID.Models
         public double availableWater { get; set; }
         [DataMember(Name = "rootZoneDepth")]
         public double rootZoneDepth { get; set; }
-        [DataMember(Name = "anagementAllowedDepletion")]
+        [DataMember(Name = "managementAllowedDepletion")]
         public double managementAllowedDepletion { get; set; }
         [DataMember(Name = "efficiency")]
         public double efficiency { get; set; }
