@@ -137,87 +137,33 @@ namespace HSPI_RACHIOSIID
 		}
 		#region - Timer
 		private System.Timers.Timer test_timer = new System.Timers.Timer();
-        private double timerVal = 0;
+        
         private void start_test_timer()
 		{
 			Console.WriteLine("Starting timer...");
 
-            
+            updateStatusValues();			
 
-			test_timer.Elapsed += test_timer_Elapsed;
+            test_timer.Interval = 30000 * pluginpage.updateInterval; // 5 min * Options update frequency 
 
-            
-            test_timer.Interval = 10000 * pluginpage.updateInterval; // 1 min * Options update frequency 
-            timerVal += 1;
+            Console.WriteLine("Time interval set to " + (test_timer.Interval/60000) + " minutes");
 
             test_timer.Enabled = true;
-		}
+
+            test_timer.Elapsed += test_timer_Elapsed;
+        }
 		
 		private void test_timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
-		{
-			
-			pluginpage.updateCount++;
+		{						
 			updateStatusValues();
 		}
 		#endregion
 		#region - UpdateUI
 		private void updateStatusValues()
-		{
-            
-            if(Util.hs.DeviceCount == 0)
-            {
-                Util.Find_Create_Devices();
-            }
-
-			// increment our test value so we can see it change on the device and test triggers
-			// find our device, we only have one
-			Scheduler.Classes.DeviceClass dv = default(Scheduler.Classes.DeviceClass);
-			int dvRef = 0;
+		{            						
 			RachioConnection rachio = new RachioConnection();
-			
-            
-            try
-			{
-				Scheduler.Classes.clsDeviceEnumeration EN = default(Scheduler.Classes.clsDeviceEnumeration);
-				EN = (Scheduler.Classes.clsDeviceEnumeration)Util.hs.GetDeviceEnumerator();
-				if (EN == null)
-                {
-                 
-                    throw new Exception(Util.IFACE_NAME + " failed to get a device enumerator from HomeSeer.");
-                }
-                
-                do
-				{
-					dv = EN.GetNext();
-					if (dv == null)
-						continue;
-					if (dv.get_Interface(null) != null)
-					{
-						DeviceTypeInfo_m.DeviceTypeInfo DT = dv.get_DeviceType_Get(Util.hs);
-						if (dv.get_Interface(null).Trim() == Util.IFACE_NAME && DT.Device_Type == 71)
-						{
-							dvRef = dv.get_Ref(null);
-							Zone z = rachio.getZoneForZoneNumberInDevice(DT.Device_SubType, 0);
-							Util.hs.SetDeviceString(dvRef, rachio.getStatusForZone(z), true);
-							if (rachio.getTimeRemainingForZone(z) == 0)//if its off, highligh the off button
-							{
-								Util.hs.SetDeviceValueByRef(dvRef, 0, true);
-							}
-							else
-							{
-								Util.hs.SetDeviceValueByRef(dvRef, -1, true);
-							}
-						(((Scheduler.Classes.DeviceClass)(Util.hs).GetDeviceByRef(dvRef))).set_Name(Util.hs, z.name);
 
-						}
-					}
-				} while (!(EN.Finished));
-			}
-			catch (Exception ex)
-			{
-                
-                Util.hs.WriteLog(Util.IFACE_NAME + " Error", "Exception in Find_Create_Devices/Enumerator: " + ex.Message);
-			}
+            Util.Find_Create_Devices(rachio);         
 		}
 		#endregion
 
@@ -403,6 +349,7 @@ namespace HSPI_RACHIOSIID
 			{
 				ri.Result = IPlugInAPI.enumPollResult.Device_Not_Found;
 			}
+            
 			return ri;
 		}
 
@@ -420,7 +367,7 @@ namespace HSPI_RACHIOSIID
 
 				if (!(CC.ControlType == Enums.CAPIControlType.List_Text_from_List))
 				{
-					//MONEY
+					
 
 
 					Scheduler.Classes.DeviceClass dv = (Scheduler.Classes.DeviceClass)Util.hs.GetDeviceByRef(CC.Ref);
