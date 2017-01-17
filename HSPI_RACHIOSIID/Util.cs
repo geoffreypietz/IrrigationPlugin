@@ -180,12 +180,14 @@ namespace HSPI_RACHIOSIID
             {
                 if(z.name.Contains("Control"))
                 {
-                    if(ZoneDeviceValues(z,i)==1)
+                    if (ZoneDeviceValues(z, i) == 1)
                     {
                         objCAPIControl = hs.CAPIGetSingleControlByUse(dvRef, ePairControlUse._On);
                     }
                     else
+                    {
                         objCAPIControl = hs.CAPIGetSingleControlByUse(dvRef, ePairControlUse._Off);
+                    }
                 }
                 else
                 hs.SetDeviceValueByRef(dvRef + i - 6, ZoneDeviceValues(z,i), true);
@@ -244,7 +246,9 @@ namespace HSPI_RACHIOSIID
                                 dv.set_Code(hs, zone.name + "-" + zString);
                                 dv.set_Location(hs, "RachioSIID");
                                 dv.set_Location2(hs, "RachioSIID");
-                                
+                                dv.set_Interface(hs, IFACE_NAME);
+                                dv.set_Status_Support(hs, true);
+                                dv.set_Can_Dim(hs, false);
                                 dv.MISC_Set(hs, Enums.dvMISC.NO_LOG);
 
                                 // Root specific
@@ -263,7 +267,7 @@ namespace HSPI_RACHIOSIID
 
                                     VSVGPairs.VSPair SPair = default(VSVGPairs.VSPair);
                                     SPair = new VSVGPairs.VSPair(ePairStatusControl.Status);
-                                    SPair.ControlUse = ePairControlUse.Not_Specified;
+                                    
                                     
                                     SPair.PairType = VSVGPairs.VSVGPairType.SingleValue;
                                     SPair.Status = "Root";
@@ -284,18 +288,32 @@ namespace HSPI_RACHIOSIID
                                     dv.MISC_Set(hs, Enums.dvMISC.SHOW_VALUES);
                                     dv.set_DeviceType_Set(hs, DT);
 
-                                    VSVGPairs.VSPair Pair = default(VSVGPairs.VSPair);
-                                    Pair = new VSVGPairs.VSPair(HomeSeerAPI.ePairStatusControl.Status);
-                                    Pair.PairType = VSVGPairs.VSVGPairType.SingleValue;
-                                    Pair.Value = 0;
-                                    Pair.Status = "Off";
-                                    Default_VS_Pairs_AddUpdateUtil(dvRef, Pair);
+                                    // add an OFF button and value
+                                    VSVGPairs.VSPair SPair = default(VSVGPairs.VSPair);
+                                    SPair = new VSVGPairs.VSPair(HomeSeerAPI.ePairStatusControl.Both);
+                                    SPair.PairType = VSVGPairs.VSVGPairType.SingleValue;
+                                    SPair.Value = 0;
+                                    SPair.Status = "Off";
+                                    SPair.Render = Enums.CAPIControlType.Button;
+                                    SPair.Render_Location.Row = 1;
+                                    SPair.Render_Location.Column = 1;
+                                    SPair.ControlUse = ePairControlUse._Off;
+                                    // set this for UI apps like HSTouch so they know this is for OFF
+                                    hs.DeviceVSP_AddPair(dvRef, SPair);
 
-                                    Pair = new VSVGPairs.VSPair(HomeSeerAPI.ePairStatusControl.Status);
-                                    Pair.PairType = VSVGPairs.VSVGPairType.SingleValue;
-                                    Pair.Value = 1;
-                                    Pair.Status = "On";
-                                    Default_VS_Pairs_AddUpdateUtil(dvRef, Pair);
+                                    // add an ON button and value
+                                    SPair = new VSVGPairs.VSPair(HomeSeerAPI.ePairStatusControl.Both);
+                                    SPair.PairType = VSVGPairs.VSVGPairType.SingleValue;
+                                    SPair.Value = 1;
+                                    SPair.Status = "On";
+                                    SPair.ControlUse = ePairControlUse._On;
+                                    // set this for UI apps like HSTouch so they know this is for lighting control ON
+                                    SPair.Render = Enums.CAPIControlType.Button;
+                                    SPair.Render_Location.Row = 1;
+                                    SPair.Render_Location.Column = 2;
+                                    hs.DeviceVSP_AddPair(dvRef, SPair);
+
+
 
                                     VSVGPairs.VGPair GPair = new VSVGPairs.VGPair();
                                     GPair.PairType = VSVGPairs.VSVGPairType.SingleValue;
@@ -395,7 +413,7 @@ namespace HSPI_RACHIOSIID
                                 if (zString.Equals("Total Runtime"))
                                 {
                                     
-
+                                    
                                     dv.set_Relationship(hs, Enums.eRelationship.Child);
                                     dv.MISC_Set(hs, Enums.dvMISC.STATUS_ONLY);
                                     dv.set_DeviceType_Set(hs, DT);
