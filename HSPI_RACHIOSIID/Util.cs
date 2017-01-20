@@ -44,6 +44,8 @@ namespace HSPI_RACHIOSIID
 
         public static SortedList colActs;
 
+        
+
 
 
         public static bool StringIsNullOrEmpty(ref string s)
@@ -134,64 +136,70 @@ namespace HSPI_RACHIOSIID
 
             return deviceList;
         }
-        static internal int ZoneDeviceValues(Zone z, int i)
-        {
-            int zoneValue;
-            if(i==1)
-            {
-                if (z.enabled == false)
-                    zoneValue = 0;
-                else
-                    zoneValue = 1;
-            }
-            else if (i == 2)
-            {
-                zoneValue = 5;
-            }
-                
-            else if(i == 3)
-            {
-                zoneValue = 5;
-            }
-                
-            else if (i == 4)
-            {
-                zoneValue = 3;
-            }
-                
-            else
-            {
-                zoneValue = z.runtime;
-            }
-                
 
-            
-            return zoneValue;
-        }
 
-        static internal void Update_Zone(Zone z, DeviceClass dv, RachioConnection rachio)
+        static internal void Update_Zone(Zone z, DeviceClass dv, RachioConnection rachio, Current_Schedule currentS)
         {
             int dvRef;
             CAPI.CAPIControl objCAPIControl;
 
-            dvRef = dv.get_Ref(hs);
+            dvRef = dv.get_Ref(hs); // Root Ref #
             
             for(int i=1;i<6;i++)
             {
-                if(z.name.Contains("Control"))
+                if(i==1)    // Control devices
                 {
-                    if (ZoneDeviceValues(z, i) == 1)
+                    if (rachio.getTimeRemainingForZone(z) > 0)   // If the time On is greater than zero
                     {
-                        objCAPIControl = hs.CAPIGetSingleControlByUse(dvRef, ePairControlUse._On);
+                        
+                        hs.SetDeviceValueByRef(dvRef - 5, 1, true); // Set Control Device to On
+                        hs.SetDeviceString(dvRef - 5, rachio.getStatusForZone(z), true);
+                        
+                        
                     }
                     else
                     {
-                        objCAPIControl = hs.CAPIGetSingleControlByUse(dvRef, ePairControlUse._Off);
+                        
+                        hs.SetDeviceValueByRef(dvRef - 5, 0, true); // Set Control Device to Off
+                        
+                        hs.SetDeviceString(dvRef - 5, "Off", true);
+                        
                     }
                 }
-                else
-                hs.SetDeviceValueByRef(dvRef + i - 6, ZoneDeviceValues(z,i), true);
+                else if(i==2)  // Last Duration devices
+                {
+                    if (rachio.getTimeRemainingForZone(z) > 0)  // This only changes if the zone is On, that is, a new duration
+                    {
+                        double dur = currentS.duration / 60;
+                        dur = Math.Round(dur, 1);
+
+                        hs.SetDeviceValueByRef(dvRef - 4, dur, true); 
+                    }
+                }
+                else if(i==3)
+                {
+                    
+                    double watered = rachio.getLastWateredForZone(z);
+                    watered = Math.Round(watered / 24 / 3600, 1);
+
+                    hs.SetDeviceValueByRef(dvRef - 3, watered, true);
+                }
+                else if(i==4)
+                {
+                    hs.SetDeviceValueByRef(dvRef - 2, 3, true);
+                }
+                else if(i==5)
+                {
+                    double runtime = z.runtime;
+                    runtime = Math.Round(runtime/60, 1);
+                    hs.SetDeviceValueByRef(dvRef - 1, runtime, true);
+                }
             }
+        }
+
+        static internal void Update_Weather(CurrentWeather currentW, DeviceClass dv, RachioConnection rachio)
+        {
+
         }
 
         static string[] zoneStrings = new string[6] { "Control", "Last Duration", "Last Watered", "Max Runtime", "Total Runtime", "Root"};
@@ -200,12 +208,22 @@ namespace HSPI_RACHIOSIID
 
             List<DeviceClass> deviceList = new List<DeviceClass>();
             DeviceClass dv = default(DeviceClass);
-            bool Found;
-            string testAddress;
+            
             Person p = rachio.getPerson();
+            
 
             deviceList = Get_Device_List(deviceList, dv);
 
+            Find_Create_Zones(dv, p, deviceList, rachio);
+            Find_Create_Weather(dv, p, deviceList, rachio);
+
+        }
+
+        static internal void Find_Create_Zones(DeviceClass dv, Person p, List<DeviceClass> deviceList,  RachioConnection rachio)
+        {
+            Current_Schedule current = rachio.getCurrentSchedule();
+            bool Found;
+            string testAddress;
             foreach (Zone zone in p.devices[0].zones)
             {
 
@@ -215,11 +233,10 @@ namespace HSPI_RACHIOSIID
                 {
                     foreach (var device in deviceList)
                     {
-                        
+
                         if (device.get_Address(hs).Contains(testAddress))
                         {
-
-                            Update_Zone(zone, device, rachio);
+                            Update_Zone(zone, device, rachio, current);
                             Found = true;
                             break;
                         }
@@ -237,16 +254,17 @@ namespace HSPI_RACHIOSIID
                                 Console.WriteLine("Creating Device: " + dvName);
                                 var DT = new DeviceTypeInfo_m.DeviceTypeInfo();
                                 DT.Device_API = DeviceTypeInfo_m.DeviceTypeInfo.eDeviceAPI.Plug_In;
-                                
-                                
+
+
                                 hs.NewDeviceRef(dvName);
                                 dvRef = hs.GetDeviceRefByName(dvName);
                                 dv = (DeviceClass)hs.GetDeviceByRef(dvRef);
-                                dv.set_Address(hs, "RACHIOSIID");
+                                dv.set_Address(hs, IFACE_NAME);
                                 dv.set_Code(hs, zone.name + "-" + zString);
                                 dv.set_Location(hs, "RachioSIID");
                                 dv.set_Location2(hs, "RachioSIID");
                                 dv.set_Interface(hs, IFACE_NAME);
+
                                 dv.set_Status_Support(hs, true);
                                 dv.set_Can_Dim(hs, false);
                                 dv.MISC_Set(hs, Enums.dvMISC.NO_LOG);
@@ -267,8 +285,8 @@ namespace HSPI_RACHIOSIID
 
                                     VSVGPairs.VSPair SPair = default(VSVGPairs.VSPair);
                                     SPair = new VSVGPairs.VSPair(ePairStatusControl.Status);
-                                    
-                                    
+
+
                                     SPair.PairType = VSVGPairs.VSVGPairType.SingleValue;
                                     SPair.Status = "Root";
 
@@ -279,7 +297,7 @@ namespace HSPI_RACHIOSIID
                                     GPair.Set_Value = 0;
                                     GPair.Graphic = "/images/hspi_ultrarachio3/device_root.png";
                                     hs.DeviceVGP_AddPair(dvRef, GPair);
-                                    
+
                                 }
                                 // Control specific
                                 if (zString.Equals("Control"))
@@ -318,7 +336,7 @@ namespace HSPI_RACHIOSIID
                                     VSVGPairs.VGPair GPair = new VSVGPairs.VGPair();
                                     GPair.PairType = VSVGPairs.VSVGPairType.SingleValue;
                                     GPair.Set_Value = 0;
-                                    GPair.Graphic = "/images/hspi_ultrarachio3/device_offline.png";
+                                    GPair.Graphic = "/images/hspi_ultrarachio3/zone_off.png";
                                     hs.DeviceVGP_AddPair(dvRef, GPair);
 
 
@@ -326,7 +344,7 @@ namespace HSPI_RACHIOSIID
                                     GPair = new VSVGPairs.VGPair();
                                     GPair.PairType = VSVGPairs.VSVGPairType.SingleValue;
                                     GPair.Set_Value = 1;
-                                    GPair.Graphic = "/images/hspi_ultrarachio3/device_online.png";
+                                    GPair.Graphic = "/images/hspi_ultrarachio3/zone_on.png";
                                     hs.DeviceVGP_AddPair(dvRef, GPair);
 
                                     childRef[0] = dvRef;
@@ -378,7 +396,7 @@ namespace HSPI_RACHIOSIID
                                     GPair.RangeStart = 0;
                                     GPair.RangeEnd = 9999;
                                     GPair.Set_Value = 0;
-                                    GPair.Graphic = "/images/hspi_ultrarachio3/schedule_rule_disabled.png.";
+                                    GPair.Graphic = "/images/hspi_ultrarachio3/schedule_rule_enabled.png.";
                                     hs.DeviceVGP_AddPair(dvRef, GPair);
 
                                     childRef[2] = dvRef;
@@ -412,8 +430,8 @@ namespace HSPI_RACHIOSIID
                                 // Total Runtime specific
                                 if (zString.Equals("Total Runtime"))
                                 {
-                                    
-                                    
+
+
                                     dv.set_Relationship(hs, Enums.eRelationship.Child);
                                     dv.MISC_Set(hs, Enums.dvMISC.STATUS_ONLY);
                                     dv.set_DeviceType_Set(hs, DT);
@@ -425,7 +443,7 @@ namespace HSPI_RACHIOSIID
                                     SPair.RangeStatusSuffix = " Hours";
                                     SPair.RangeStart = 0;
                                     SPair.RangeEnd = 999999;
-                                    
+
                                     hs.DeviceVSP_AddPair(dvRef, SPair);
 
 
@@ -442,7 +460,7 @@ namespace HSPI_RACHIOSIID
                                     childRef[4] = dvRef;
                                 }
                                 hs.SaveEventsDevices();
-                            } 
+                            }
                         }
 
                     }
@@ -452,110 +470,122 @@ namespace HSPI_RACHIOSIID
 
                     throw;
                 }
+            }
+        }
 
+        static string[] weatherStrings = new string[11] { "Cloud Cover", "Dew Point", "Humidity", "Precip Intensity", "Precip Probablility", "Precipitation", "Temperature", "Weather Conditions", "Weather Update", "Wind Speed", "Weather Root" };
+        static string[] forecastStrings = new string[11] { "Cloud Cover", "Dew Point", "Humidity", "Precip Intensity", "Precip Probablility", "Precipitation", "TemperatureMax", "TemperatureMin",  "Weather Conditions", "Wind Speed", "Weather Root" };
 
+        static internal void Find_Create_Weather(DeviceClass dv, Person p, List<DeviceClass> deviceList, RachioConnection rachio)
+        {
+            
+            CurrentWeather currentW = rachio.getCurrentWeather();
 
-                /*try
+            // Current Weather
+            foreach (var wString in weatherStrings)
+            {
+                Weather_Forecast_Devices(dv, false, IFACE_NAME + "-Current-" + wString, currentW, null, deviceList, rachio);
+                
+            }
+            // Todays Forecast
+            foreach (var fString in forecastStrings)
+            {
+                Weather_Forecast_Devices(dv, false, IFACE_NAME + "-Todays-" + fString, null, currentW.forecastList[0], deviceList, rachio);
+            }
+            // Tomorrows Forecast
+            foreach (var fString in forecastStrings)
+            {
+                Weather_Forecast_Devices(dv, false, IFACE_NAME + "-Tomorrows-" + fString, null, currentW.forecastList[1], deviceList, rachio);
+            }
+        }
+
+        static internal void Weather_Forecast_Devices(DeviceClass dv, bool Found, string testAddress, CurrentWeather currentW, Forecast forecast, List<DeviceClass> deviceList, RachioConnection rachio)
+        {
+            
+            try
+            {
+                foreach (var device in deviceList)
                 {
-                    if (!Found)
+
+                    if (device.get_Address(hs).Contains(testAddress))
                     {
-                        int dvRef = 0;
-                        int count = 0;
-                        Console.WriteLine("Creating Devices...");
+                        Update_Weather(currentW, device, rachio);
+                        Found = true;
+                        break;
+                    }
+                }
+                if (!Found)
+                {
+                    int dvRef;
+                    string dvName;
+                    if (true)
+                    {
+                        int[] childRef = new int[5];
+                        foreach (var zString in zoneStrings)
+                        {
+                            dvName = testAddress;
+                            Console.WriteLine("Creating Device: " + dvName);
+                            var DT = new DeviceTypeInfo_m.DeviceTypeInfo();
+                            DT.Device_API = DeviceTypeInfo_m.DeviceTypeInfo.eDeviceAPI.Plug_In;
 
-                        // ALL DEVICES
 
-                        dv.set_Address(hs, "RACHIOSIID");
-                        dv.set_Code(hs, z.name);
-                        dv.set_Location(hs, "Rachio_SIID");
-                        dv.set_Location2(hs, "Rachio_SIID");
-                        dv.MISC_Set(hs, Enums.dvMISC.SHOW_VALUES);
-                        dv.MISC_Set(hs, Enums.dvMISC.NO_LOG);
-                        //dv.MISC_Set(hs, Enums.dvMISC.STATUS_ONLY)      ' set this for a status only device, no controls, and do not include the DeviceVSP calls above
-                        //dv.MISC_Set(hs,Enums.dvMISC.HIDDEN);
-                        dv.set_Status_Support(hs, true);
+                            hs.NewDeviceRef(dvName);
+                            dvRef = hs.GetDeviceRefByName(dvName);
+                            dv = (DeviceClass)hs.GetDeviceByRef(dvRef);
+                            dv.set_Address(hs, IFACE_NAME);
+                            dv.set_Code(hs, "Current);
 
-                        // ZONES
-                        
-                            Console.WriteLine(z.name);
-                            //Zone Root
-                            dvRef = hs.NewDeviceRef(z.name);
-                            MyDevice = dvRef; //for auto update
-                            if (dvRef > 0)
+                            dv.set_Location(hs, "RachioSIID");
+                            dv.set_Location2(hs, "RachioSIID");
+                            dv.set_Interface(hs, IFACE_NAME);
+
+                            dv.set_Status_Support(hs, true);
+                            dv.set_Can_Dim(hs, false);
+                            dv.MISC_Set(hs, Enums.dvMISC.NO_LOG);
+
+                            // Root specific
+                            if (wString.Equals("Weather Root"))
                             {
-
-                                dv = (Scheduler.Classes.DeviceClass)hs.GetDeviceByRef(dvRef);
-
-                                dv.set_Code(hs, dvRef.ToString());
-                                //dv.Can_Dim(hs, True
-                                dv.set_Device_Type_String(hs, "Rachio Zone" + z.zoneNumber + " Root");
-                                DeviceTypeInfo_m.DeviceTypeInfo DT = new DeviceTypeInfo_m.DeviceTypeInfo();
-                                DT.Device_API = DeviceTypeInfo_m.DeviceTypeInfo.eDeviceAPI.Plug_In;
-                                DT.Device_Type = 71;
-                                DT.Device_SubType = z.zoneNumber;
+                                dv.set_Relationship(hs, Enums.eRelationship.Parent_Root);
+                                dv.MISC_Set(hs, Enums.dvMISC.STATUS_ONLY);
+                                DT.Device_Type = 99;
                                 dv.set_DeviceType_Set(hs, DT);
-                                dv.set_Interface(hs, IFACE_NAME);
-                                dv.set_InterfaceInstance(hs, "");
-                                dv.set_Last_Change(hs, new DateTime());
-                            }
-                            count++;
 
-                            //Zone Control
-                            dvRef = hs.NewDeviceRef(z.name);
-                            MyDevice = dvRef; //for auto update
-                            if (dvRef > 0)
-                            {
+                                for (int i = 0; i < 5; i++)
+                                {
+                                    dv.AssociatedDevice_Add(hs, childRef[i]);
 
-                                dv = (Scheduler.Classes.DeviceClass)hs.GetDeviceByRef(dvRef);
-                                dv.set_Address(hs, "HOME");
-                                //dv.Can_Dim(hs, True
-                                dv.set_Device_Type_String(hs, "Rachio Zone" + z.zoneNumber + " Control");
-                                DeviceTypeInfo_m.DeviceTypeInfo DT = new DeviceTypeInfo_m.DeviceTypeInfo();
-                                DT.Device_API = DeviceTypeInfo_m.DeviceTypeInfo.eDeviceAPI.Plug_In;
-                                DT.Device_Type = 71;
-                                DT.Device_SubType = z.zoneNumber;
-                                dv.set_DeviceType_Set(hs, DT);
-                                dv.set_Interface(hs, IFACE_NAME);
-                                dv.set_InterfaceInstance(hs, "");
-                                dv.set_Last_Change(hs, new DateTime());
+                                }
+
+                                VSVGPairs.VSPair SPair = default(VSVGPairs.VSPair);
+                                SPair = new VSVGPairs.VSPair(ePairStatusControl.Status);
 
 
+                                SPair.PairType = VSVGPairs.VSVGPairType.SingleValue;
+                                SPair.Status = "Root";
 
-                                VSVGPairs.VSPair Pair = default(VSVGPairs.VSPair);
-                                // add values, will appear as a radio control and only allow one option to be selected at a time
-                                Pair = new VSVGPairs.VSPair(ePairStatusControl.Both);
-                                Pair.PairType = VSVGPairs.VSVGPairType.SingleValue;
-                                Pair.Render = Enums.CAPIControlType.List_Text_from_List;
-                                Pair.Value = 0;
-                                Pair.Status = "Value 0";
-                                hs.DeviceVSP_AddPair(dvRef, Pair);
-                                Pair.Value = 1;
-                                Pair.Status = "Value 1";
-                                hs.DeviceVSP_AddPair(dvRef, Pair);
-                                Pair.Value = 2;
-                                Pair.Status = "Value 2";
-                                hs.DeviceVSP_AddPair(dvRef, Pair);
+                                hs.DeviceVSP_AddPair(dvRef, SPair);
 
-
+                                VSVGPairs.VGPair GPair = new VSVGPairs.VGPair();
+                                GPair.PairType = VSVGPairs.VSVGPairType.SingleValue;
+                                GPair.Set_Value = 0;
+                                GPair.Graphic = "/images/hspi_ultrarachio3/device_root.png";
+                                hs.DeviceVGP_AddPair(dvRef, GPair);
 
                             }
-                            count++;
-
-                            
-                        
 
 
+                            hs.SaveEventsDevices();
+                        }
                     }
 
                 }
-                catch (Exception ex)
-                {
-                    hs.WriteLog(IFACE_NAME + " Error", "Exception in Find_Create_Devices/Create: " + ex.Message);
-                }
-            */
-
             }
+            catch (Exception)
+            {
 
+                throw;
+            }
         }
 
         private static void Default_VS_Pairs_AddUpdateUtil(int dvRef, VSVGPairs.VSPair Pair)

@@ -24,6 +24,8 @@ namespace HSPI_RACHIOSIID.Models
         public string messagingAuthKey { get; set; }
         [DataMember(Name = "accessToken")]
         public string accessToken { get; set; }
+        [DataMember(Name = "units")]
+        public string units { get; set; }
     }
 }
 

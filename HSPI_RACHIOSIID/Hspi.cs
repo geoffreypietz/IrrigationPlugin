@@ -28,14 +28,18 @@ namespace HSPI_RACHIOSIID
 
 		public static bool bShutDown = false;
 
-		#region "Externally Accessible Methods/Procedures - e.g. Script Commands"
+        public double duration { get; set; }
 
-		#endregion
+        public string units { get; set; }
 
-		#region "Common Interface"
+        #region "Externally Accessible Methods/Procedures - e.g. Script Commands"
 
-		// For search demonstration purposes only.
-		string[] Zone = new string[6];
+        #endregion
+
+        #region "Common Interface"
+
+        // For search demonstration purposes only.
+        string[] Zone = new string[6];
 		Scheduler.Classes.DeviceClass OneOfMyDevices = new Scheduler.Classes.DeviceClass();
 		public HomeSeerAPI.SearchReturn[] Search(string SearchString, bool RegEx)//TODO add search
 		{
@@ -360,30 +364,43 @@ namespace HSPI_RACHIOSIID
 
 		public void SetIOMulti(System.Collections.Generic.List<HomeSeerAPI.CAPI.CAPIControl> colSend)
 		{
-			//TODO set status here I think
+            //TODO set status here I think
 			foreach (CAPI.CAPIControl CC in colSend)
 			{
 				Console.WriteLine("SetIOMulti set value: " + CC.ControlValue.ToString() + "->ref:" + CC.Ref.ToString());
 
-				if (!(CC.ControlType == Enums.CAPIControlType.List_Text_from_List))
+                var dv = (Scheduler.Classes.DeviceClass)Util.hs.GetDeviceByRef(CC.Ref);
+
+                if (CC.ControlType == Enums.CAPIControlType.Button)
 				{
-					
 
+                    var zAddress = new string[3];
+                    zAddress = dv.get_Address(Util.hs).Split('-');  // The device address is split into three strings [IFACENAME],[Zone #],[Control]
+                    int zoneNumber = Int16.Parse(zAddress[1].Substring(5)); // The zone number is parsed from the [Zone #] string
 
-					Scheduler.Classes.DeviceClass dv = (Scheduler.Classes.DeviceClass)Util.hs.GetDeviceByRef(CC.Ref);
-					DeviceTypeInfo_m.DeviceTypeInfo DT = default(DeviceTypeInfo_m.DeviceTypeInfo);
-					DT = dv.get_DeviceType_Get(Util.hs);
-
-					int zoneNumber = DT.Device_SubType;
-					int seconds = ((int)CC.ControlValue) * 3600;
+					double minutes = ((double)CC.ControlValue) * 60;
 					RachioConnection rachio = new RachioConnection();
 					Zone z = rachio.getZoneForZoneNumberInDevice(zoneNumber, 0);
-					rachio.turnOnZoneIDForTime(z.id, seconds);
-					updateStatusValues();
-					Util.hs.SetDeviceValueByRef(CC.Ref, rachio.getTimeRemainingForZone(z), true);
+					
+					
+					Util.hs.SetDeviceValueByRef(CC.Ref, CC.ControlValue, true);
 					Util.hs.SetDeviceString(CC.Ref, rachio.getStatusForZone(z), true);
-
-				}
+                    if (CC.ControlValue == 1)
+                    {
+                        rachio.turnOnZoneIDForTime(z.id, minutes);
+                        duration = minutes; 
+                        CC.ControlUse = ePairControlUse._On;
+                        
+                    }
+                    else
+                    {
+                        duration = duration - rachio.getTimeRemainingForZone(z); // If the zone is shut "Off" early, the remaining time is subtracted to calculate the actual runtime.
+                        CC.ControlUse = ePairControlUse._Off;
+                        Util.hs.SetDeviceValueByRef(CC.Ref+1, duration, true);
+                        Util.hs.SetDeviceValueByRef(CC.Ref, 0, true);
+                        Util.hs.SetDeviceString(CC.Ref, "Off", true);
+                    }
+                }
 
 
 			}

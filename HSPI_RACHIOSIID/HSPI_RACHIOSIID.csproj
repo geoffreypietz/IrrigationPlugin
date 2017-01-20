@@ -58,12 +58,15 @@
   <ItemGroup>
     <Compile Include="Classes.cs" />
     <Compile Include="Hspi.cs" />
+    <Compile Include="Models\CurrentWeather.cs" />
     <Compile Include="Models\Current_Schedule.cs" />
     <Compile Include="Models\Device.cs" />
+    <Compile Include="Models\Forecast.cs" />
     <Compile Include="Models\Login.cs" />
     <Compile Include="Models\Person.cs" />
     <Compile Include="Models\PersonId.cs" />
     <Compile Include="Models\RachioConnection.cs" />
+    <Compile Include="Models\StartEndTime.cs" />
     <Compile Include="Models\Zone.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

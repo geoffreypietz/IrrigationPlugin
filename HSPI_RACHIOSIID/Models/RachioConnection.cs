@@ -14,6 +14,7 @@ namespace HSPI_RACHIOSIID.Models
         public string APIKey;
         private string PersonID;
         private string DeviceID;
+        private string units;
         public RachioConnection()
         {
             string userPrefs = System.IO.File.ReadAllText(@"Data/hspi_rachiosiid/userprefs.txt");
@@ -27,6 +28,7 @@ namespace HSPI_RACHIOSIID.Models
 
             PersonID = getPersonId().id;
             DeviceID = getPerson().devices[0].id;
+            units = Login.units;
             //Person p = getPerson ();
 
         }
@@ -114,7 +116,7 @@ namespace HSPI_RACHIOSIID.Models
             HttpWebRequest request = getRequestWithURLGet("https://api.rach.io/1/public/person/info");
             return getResponseAsObject<PersonId>(request);
         }
-        public void turnOnZoneIDForTime(string zoneID, int duration)
+        public void turnOnZoneIDForTime(string zoneID, double duration)
         {
             HttpWebRequest request = getRequestWithURLPut("https://api.rach.io/1/public/zone/start");
             addJsonToRequest(request, "{\"id\" : \"" + zoneID + "\", \"duration\" : " + duration + "}");
@@ -136,22 +138,47 @@ namespace HSPI_RACHIOSIID.Models
             HttpWebRequest request = getRequestWithURLGet("https://api.rach.io/1/public/device/" + DeviceID + "/current_schedule");
             return getResponseAsObject<Current_Schedule>(request);
         }
+        public StartEndTime getStartEndTime(string start, string end)
+        {
+            HttpWebRequest request = getRequestWithURLGet("https://api.rach.io/1/public/device/" + DeviceID + "/event?startTime=" + start + "&endTime=" + end);
+            return getResponseAsObject<StartEndTime>(request);
+        }
+        public CurrentWeather getCurrentWeather()
+        {
+            HttpWebRequest request = getRequestWithURLGet("https://api.rach.io/1/public/device/" + DeviceID + "/forecast?units=" + units);
+            return getResponseAsObject<CurrentWeather>(request);
+        }
         //API addons
-        public long getTimeRemainingForZone(Zone z)
+        public double getTimeRemainingForZone(Zone z)
         {
             Current_Schedule cs = getCurrentSchedule();
             if (cs != null && cs.zoneId != null && cs.zoneId != "" && cs.zoneId == z.id)
             {
                 TimeSpan unixTime = DateTime.UtcNow - new DateTime(1970, 1, 1);
-                long secondsSinceEpoch = (long)unixTime.TotalSeconds;
+                double secondsSinceEpoch = (double)unixTime.TotalSeconds;
                 return cs.zoneStartDate / 1000 + cs.duration - secondsSinceEpoch;
             }
             return 0;
         }
+
+        public double getLastWateredForZone(Zone z)
+        {
+            Current_Schedule cs = getCurrentSchedule();
+            if (cs != null && cs.zoneId != null && cs.zoneId != "" && cs.zoneId == z.id)
+            {
+                Console.WriteLine(cs.zoneStartDate);
+                TimeSpan unixTime = DateTime.UtcNow - new DateTime(1970, 1, 1);
+                double secondsSinceEpoch = (double)unixTime.TotalSeconds;
+                return secondsSinceEpoch - cs.zoneStartDate / 1000 + cs.duration;
+            }
+            return 0;
+        }
+
         public string getStatusForZone(Zone z)
         {
-            long timeRemaining = getTimeRemainingForZone(z);
-            return (timeRemaining != 0) ? ((timeRemaining / 60) + " more minutes") : "Off";
+            double timeRemaining = getTimeRemainingForZone(z) / 60;
+            timeRemaining = Math.Round(timeRemaining, 1);
+            return (timeRemaining != 0) ? (timeRemaining + " more minutes") : "Off";
         }
 
         //Converters
