@@ -14,7 +14,7 @@ namespace HSPI_RACHIOSIID.Models
         public string APIKey;
         private string PersonID;
         private string DeviceID;
-        private string units;
+        public string units;
         public RachioConnection()
         {
             string userPrefs = System.IO.File.ReadAllText(@"Data/hspi_rachiosiid/userprefs.txt");
@@ -115,7 +115,7 @@ namespace HSPI_RACHIOSIID.Models
         {
             HttpWebRequest request = getRequestWithURLGet("https://api.rach.io/1/public/person/info");
             return getResponseAsObject<PersonId>(request);
-        }
+        }        
         public void turnOnZoneIDForTime(string zoneID, double duration)
         {
             HttpWebRequest request = getRequestWithURLPut("https://api.rach.io/1/public/zone/start");

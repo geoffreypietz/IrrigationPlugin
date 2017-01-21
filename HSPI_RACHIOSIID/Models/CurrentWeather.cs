@@ -18,6 +18,8 @@ namespace HSPI_RACHIOSIID.Models
         public double precipIntensity { get; set; }
         [DataMember(Name = "precipProbability")]
         public double precipProbability { get; set; }
+        [DataMember(Name = "precipitation")]
+        public double precipitation { get; set; }
         [DataMember(Name = "windSpeed")]
         public int windSpeed { get; set; }
         [DataMember(Name = "humidity")]
