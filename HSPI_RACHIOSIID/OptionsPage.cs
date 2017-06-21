@@ -1,17 +1,12 @@
-﻿using Microsoft.VisualBasic;
-using System;
-using System.Collections;
+﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
 using System.Text;
 using System.Web;
 using Scheduler;
-using System.Xml.Linq;
-using System.IO;
-using System.Security.Cryptography;
-using System.Net;
 using HSPI_RACHIOSIID.Models;
+using static Scheduler.PageBuilderAndMenu;
+using Newtonsoft.Json;
+
 
 namespace HSPI_RACHIOSIID
 {
@@ -21,36 +16,124 @@ namespace HSPI_RACHIOSIID
         public string apiKey { get; set; }
         public string unitType { get; set; }
         public int updateInterval { get; set; }
-        public int forecastDays { get; set; }
-        public bool deviceImage { get; set; }
-        public int accessLevel { get; set; }
-        public string loggingLevel { get; set; }
+        public string loggingType { get; set; }
+        public List<bool> ZoneChecks { get; set; }
         public int updateCount { get; set; }
         public int updateSuccess { get; set; }
 
         public OptionsPage(string pagename) : base(pagename)
         {
-            string data = System.IO.File.ReadAllText(@"Data/hspi_rachiosiid/userprefs.txt");
-            updateInterval = 1;
+
+            string userPrefs = System.IO.File.ReadAllText(@"Data/hspi_rachiosiid/userprefs.txt");
+            using (Login Login = RachioConnection.getLoginInfo(userPrefs))
+            {
+                this.apiKey = Login.accessToken;
+                this.unitType = Login.units;
+                this.updateInterval = Login.updateFrequency;
+                this.loggingType = Login.loggingLevel;
+                ZoneChecks = new List<bool>();
+
+                if (Login.ZoneView == null)
+                {
+
+                    for (int i = 0; i < 16; i++)
+                    {
+                        ZoneChecks.Add(true);
+                    }
+                }
+                else
+                {
+
+                    ZoneChecks = Login.ZoneView;
+                }
+
+            }
         }
 
+        // Handles any controls on the Options Page
         public override string postBackProc(string page, string data, string user, int userRights)
         {
+
             System.Collections.Specialized.NameValueCollection parts = null;
             parts = HttpUtility.ParseQueryString(data);
-
-            Console.WriteLine("boop");
-
-            if (parts["id"] == "tokentb")
+            Console.WriteLine(data);
+            string id = parts["id"];
+            if (parts["APIToken"] != null)
             {
-                Console.WriteLine("new api token");
+                Console.WriteLine("api");
+                
+                apiKey = parts["APIToken"];
+                Console.WriteLine(apiKey);
             }
-            if (parts[""] == "")
+            Console.WriteLine("1");
+            if (id == "unitType")
+            {
+                if (data.Contains("1"))
+                {
+                    unitType = "US";
+                }
+                else
+                {
+                    unitType = "METRIC";
+                }
+
+            }
+            Console.WriteLine("2");
+            if (id == "updateInterval")
+            {
+                updateInterval = Int16.Parse(data.Substring(33));
+                Console.WriteLine(updateInterval + " minute update interval");
+
+            }
+            Console.WriteLine("3");
+            if (id == "loggingType")
+            {
+                if (data == "Off")
+                {
+                    loggingType = "Off";
+                }
+                else
+                {
+                    loggingType = "Debug";
+                }
+
+            }
+            Console.WriteLine("4");
+            if (data.Contains("ZoneCheck"))
+            {
+                if (id.Contains("ZoneCheck"))
+                {
+                    string zString = data.Split('=')[0].Substring(9);
+                    int zNum = Int16.Parse(zString);
+                    if (data.Contains("unchecked"))
+                    {
+                        ZoneChecks[zNum - 1] = false;
+                    }
+                    else
+                    {
+                        ZoneChecks[zNum - 1] = true;
+                    }
+                } 
+            }
+            try
+            {
+                Console.WriteLine("5");
+                using (var login = new Login(apiKey, unitType, updateInterval, loggingType, ZoneChecks))
+                {
+                    string json = JsonConvert.SerializeObject(login);
+                    Console.WriteLine(json);
+                    System.IO.File.WriteAllText(@"Data/hspi_rachiosiid/userprefs.txt", json);
+                    Console.WriteLine("Saved Preferences");
+                }
+                return base.postBackProc(page, data, user, userRights);
+            }
+            catch (Exception e)
             {
 
+                Console.WriteLine(e.StackTrace);
             }
 
-            return base.postBackProc(page, data, user, userRights);
+            return null;
         }
 
 
@@ -66,7 +149,7 @@ namespace HSPI_RACHIOSIID
                 page.reset();
 
                 // handle queries with special data
-                System.Collections.Specialized.NameValueCollection parts = null;
+                /*System.Collections.Specialized.NameValueCollection parts = null;
                 if ((!string.IsNullOrEmpty(queryString)))
                 {
                     parts = HttpUtility.ParseQueryString(queryString);
@@ -84,43 +167,37 @@ namespace HSPI_RACHIOSIID
                     {
                         return "";
                     }
-                }
+                }*/
 
-                pluginSB.Append("<link rel='Stylesheet' href='/hspi_rachiosiid/css/style.css' type='text / css' />");
-                page.AddHeader(pluginSB.ToString());
+                this.AddHeader(Util.hs.GetPageHeader(pageName, Util.IFACE_NAME, "", "", false, true));
+                pluginSB.Append("<link rel = 'stylesheet' href = 'hspi_rachiosiid/css/style.css' type = 'text/css' /><br>");
+                //page.AddHeader(pluginSB.ToString());
+
+
 
                 //page.RefreshIntervalMilliSeconds = 5000
                 // handler for our status div
                 //stb.Append(page.AddAjaxHandler("/devicestatus?ref=3576", "stat"))
                 pluginSB.Append(this.AddAjaxHandlerPost("action=updatetime", this.PageName));
-                
+
 
 
                 // page body starts here
 
-                this.AddHeader(Util.hs.GetPageHeader(pageName, Util.IFACE_NAME + " Controls Test", "", "", false, true));
 
+
+
+                pluginSB.Append(clsPageBuilder.DivStart("pluginpage", ""));
                 //Dim dv As DeviceClass = GetDeviceByRef(3576)
                 //Dim CS As CAPIStatus
                 //CS = dv.GetStatus
 
                 // Status/Options Tabs
-                pluginSB.Append("<hr>RachioSIID Status/Options<br><br>");
+
                 clsJQuery.jqTabs jqtabs = new clsJQuery.jqTabs("optionsTab", this.PageName);
 
-                // Status Tab
-                clsJQuery.Tab tab = new clsJQuery.Tab();
-                tab.tabTitle = "Status";
-                tab.tabDIVID = "rachiosiid-status";
-
-                var statusString = new StringBuilder();
-                statusString.Append("placeholder");
-
-                tab.tabContent = statusString.ToString();
-                jqtabs.postOnTabClick = true;
-                jqtabs.tabs.Add(tab);
-
                 // Options Tab
+                clsJQuery.Tab tab = new clsJQuery.Tab();
                 tab = new clsJQuery.Tab();
                 tab.tabTitle = "Options";
                 tab.tabDIVID = "rachiosiid-options";
@@ -133,44 +210,101 @@ namespace HSPI_RACHIOSIID
                 optionsString.Append("<tr><td class='header' colspan='2'>Rachio API Access Token</td></tr>");
                 optionsString.Append("<tr><td>API Access Token</td>");
                 optionsString.Append("<td>");
-                clsJQuery.jqTextBox tokenTextBox = new clsJQuery.jqTextBox("tokentb", "text", "", this.PageName, 30, true);
+                optionsString.Append(PageBuilderAndMenu.clsPageBuilder.FormStart("myform1", "testpage", "post"));
+
+
+                clsJQuery.jqTextBox tokenTextBox = new clsJQuery.jqTextBox("APIToken", "text", apiKey, this.PageName, 30, true);
                 tokenTextBox.promptText = "Enter your Rachio API access token.";
                 tokenTextBox.toolTip = "Access Token";
                 tokenTextBox.dialogWidth = 600;
                 optionsString.Append(tokenTextBox.Build());
+
+
+
+                clsJQuery.jqOverlay ol = new clsJQuery.jqOverlay("ov1", this.PageName, false, "events_overlay");
+                ol.toolTip = "Help with API Access Token";
+                ol.label = "Help?";
+
+                clsJQuery.jqButton apiBut = new clsJQuery.jqButton("apilink", "Rachio-API", this.PageName, true);
+                apiBut.url = "https://app.rach.io/";
+
+                ol.overlayHTML = PageBuilderAndMenu.clsPageBuilder.FormStart("overlayformm", "testpage", "post");
+                ol.overlayHTML += "<div>If you don't have an<br>access token saved, follow<br>the button link below to<br>navigate to the Rachio API.<br>Sign in and copy the <br>API Access Token within<br> the settings menu on the<br>top-right of the page.<br><br>" + apiBut.Build() + "</div>";
+                ol.overlayHTML += PageBuilderAndMenu.clsPageBuilder.FormEnd();
+                optionsString.Append(ol.Build());
+                optionsString.Append(PageBuilderAndMenu.clsPageBuilder.FormEnd());
                 optionsString.Append("</td></tr>");
 
                 // Rachio Options
                 optionsString.Append("<tr><td class='header' colspan='2'>Rachio Options</td></tr>");
-                
+
                 optionsString.Append("<tr><td>Unit Type</td>");
                 optionsString.Append("<td>");
-                clsJQuery.jqDropList dl = new clsJQuery.jqDropList("unittype", this.PageName, false);
+                clsJQuery.jqDropList dl = new clsJQuery.jqDropList("unitType", this.PageName, false);
                 dl.toolTip = "Select your preferred units.";
-                dl.AddItem("U.S. customary  units (miles, °F, etc...)", "1", true);
-                dl.AddItem("Metric system units (kms, °C, etc...)", "2", false);
+                if (unitType.Equals("US"))
+                {
+                    dl.AddItem("U.S. customary  units (miles, °F, etc...)", "1", true);
+                    dl.AddItem("Metric system units (kms, °C, etc...)", "2", false);
+                }
+                else
+                {
+                    dl.AddItem("U.S. customary  units (miles, °F, etc...)", "1", false);
+                    dl.AddItem("Metric system units (kms, °C, etc...)", "2", true);
+                }
                 dl.autoPostBack = true;
                 optionsString.Append(dl.Build());
-                dl.ClearItems();
+
+                clsJQuery.jqDropList dl2 = new clsJQuery.jqDropList("updateInterval", this.PageName, false);
                 optionsString.Append("</td></tr>");
 
                 optionsString.Append("<tr><td>Update Frequency</td>");
                 optionsString.Append("<td>");
-                dl.toolTip = "Specify how often should the RachioSIID update from the Rachio API servers.";
+                dl2.toolTip = "Specify how often RachioSIID receives updates from the Rachio API servers.";
 
-                dl.AddItem("1 Minute", "1", true);
-                for (int i=2; i<61; i++)
+                for (int i = 1; i < 61; i++)
                 {
-                    dl.AddItem(i.ToString() + " Minutes", i.ToString(), false);
+                    dl2.AddItem(i.ToString() + " Minute(s)", i.ToString(), updateInterval == i);
                 }
-                                
-                dl.autoPostBack = true;
-                optionsString.Append(dl.Build());
-                dl.ClearItems();
+
+                dl2.autoPostBack = true;
+                optionsString.Append(dl2.Build());
+
+                optionsString.Append("</td></tr>");
+
+                optionsString.Append("<tr><td>Zones View</td>");
+                optionsString.Append("<td>");
+                optionsString.Append(PageBuilderAndMenu.clsPageBuilder.FormStart("myform2", "testpage", "post"));
+
+                clsJQuery.jqOverlay ol2 = new clsJQuery.jqOverlay("ov2", this.PageName, false, "events_overlay");
+                ol2.toolTip = "Specify which Zone devices are in view";
+                ol2.label = "Zones";
+                ol2.overlayHTML = PageBuilderAndMenu.clsPageBuilder.FormStart("overlayformm", "testpage", "post");
+                ol2.overlayHTML += "<div>Select which Zones are visible:<br><br>";
+
+                for (int i = 1; i < 17; i++)
+                {
+                    clsJQuery.jqCheckBox zoneCheck = new clsJQuery.jqCheckBox("ZoneCheck" + i, "Zone " + i, this.PageName, true, false);
+                    if (ZoneChecks != null)
+                    {
+                        zoneCheck.@checked = ZoneChecks[i - 1];
+                    }
+                    else
+                    {
+                        zoneCheck.@checked = true;
+                    }
+                    zoneCheck.enabled = true;
+                    ol2.overlayHTML += zoneCheck.Build() + "<br>";
+                }
+
+                ol2.overlayHTML += "</div>";
+                ol2.overlayHTML += PageBuilderAndMenu.clsPageBuilder.FormEnd();
+                optionsString.Append(ol2.Build());
+                optionsString.Append(PageBuilderAndMenu.clsPageBuilder.FormEnd());
                 optionsString.Append("</td></tr>");
 
                 // Homeseer Device Options
-                optionsString.Append("<tr><td class='header' colspan='2'>Homeseer Device Options</td></tr>");
+                /*optionsString.Append("<tr><td class='header' colspan='2'>Homeseer Device Options</td></tr>");
 
                 optionsString.Append("<tr><td>Forecast Days</td>");
                 optionsString.Append("<td>");
@@ -198,11 +332,10 @@ namespace HSPI_RACHIOSIID
                 dl.autoPostBack = true;
                 optionsString.Append(dl.Build());
                 dl.ClearItems();
-                optionsString.Append("</td></tr>");
+                optionsString.Append("</td></tr>");*/
 
                 // Web Page Access
-
-                optionsString.Append("<tr><td class='header' colspan='2'>Web Page Access</td></tr>");
+                /*optionsString.Append("<tr><td class='header' colspan='2'>Web Page Access</td></tr>");
 
                 optionsString.Append("<tr><td>Forecast Days</td>");
                 optionsString.Append("<td>");
@@ -225,31 +358,42 @@ namespace HSPI_RACHIOSIID
                 localCheck.@checked = false;
                 optionsString.Append(localCheck.Build());
 
-                optionsString.Append("</td></tr>");
+                optionsString.Append("</td></tr>");*/
 
                 // Applications Options
                 optionsString.Append("<tr><td class='header' colspan='2'>Applications Options</td></tr>");
                 optionsString.Append("<tr><td>Logging Level</td>");
                 optionsString.Append("<td>");
-                dl.toolTip = "Specifies the plugin logging level";
 
-                var logLevel = new string[10] {"", "Emergency", "Alert", "Critical", "Error", "Warning", "Notice", "", "Trace", "Debug"};
+                clsJQuery.jqDropList dl3 = new clsJQuery.jqDropList("loggingType", this.PageName, false);
+                dl3.toolTip = "Specifiy the plugin logging level";
+                if (loggingType == "Off")
+                {
+                    dl3.AddItem("Off", "1", true);
+                    dl3.AddItem("Debug", "2", false);
+                }
+                else
+                {
+                    dl3.AddItem("Off", "1", false);
+                    dl3.AddItem("Debug", "2", true);
+                }
+                /*var logLevel = new string[10] {"", "Emergency", "Alert", "Critical", "Error", "Warning", "Notice", "", "Trace", "Debug"};
                 for (int i = 1; i < 10; i++)
                 {
                     if(i==7)
                         dl.AddItem("Informational", i.ToString(), true);
                     else
                         dl.AddItem(logLevel[i], i.ToString(), false);
-                }
+                }*/
 
-                dl.autoPostBack = true;
-                optionsString.Append(dl.Build());
-                dl.ClearItems();
+                dl3.autoPostBack = true;
+                optionsString.Append(dl3.Build());
+
                 optionsString.Append("</td></tr>");
 
                 optionsString.Append("</table>");
 
-                
+
 
                 tab.tabContent = optionsString.ToString();
                 jqtabs.tabs.Add(tab);
@@ -264,7 +408,7 @@ namespace HSPI_RACHIOSIID
                 //stb.Append(statCont.build)
 
 
-                pluginSB.Append(PageBuilderAndMenu.clsPageBuilder.DivEnd());
+
 
 
 
@@ -275,7 +419,7 @@ namespace HSPI_RACHIOSIID
             }
             pluginSB.Append("<br>");
 
-
+            pluginSB.Append(DivEnd());
             page.AddBody(pluginSB.ToString());
 
             return page.BuildPage();

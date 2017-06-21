@@ -1,15 +1,8 @@
-﻿using Microsoft.VisualBasic;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
-using Scheduler;
+﻿using System;
 using HomeSeerAPI;
 
 using HSCF.Communication.Scs.Communication.EndPoints.Tcp;
 using HSCF.Communication.ScsServices.Client;
-using HSCF.Communication.ScsServices.Service;
 
 namespace HSPI_RACHIOSIID
 {
@@ -17,6 +10,7 @@ namespace HSPI_RACHIOSIID
     {
         private static IScsServiceClient<IHSApplication> withEventsField_client;
         private static IAppCallbackAPI callback;
+        private static bool reset;
         public static IScsServiceClient<IHSApplication> client
         {
             get { return withEventsField_client; }
@@ -36,12 +30,12 @@ namespace HSPI_RACHIOSIID
 
         static IScsServiceClient<IAppCallbackAPI> clientCallback;
         private static HomeSeerAPI.IHSApplication host;
-        // real plugin functions, user supplied
         public static HSPI plugin = new HSPI();
 
 
         public static void Main(string[] args)
         {
+        
             string serverIp = "127.0.0.1";
 
             string serverCmd = null;
@@ -68,7 +62,7 @@ namespace HSPI_RACHIOSIID
                         break;
                 }
             }
-
+        Reconnect:
             Console.WriteLine("Plugin: " + Util.IFACE_NAME + " Instance: " + Util.Instance + " starting...");
             Console.WriteLine("Connecting to server at " + serverIp + "...");
             client = ScsServiceClientBuilder.CreateClient<IHSApplication>(new ScsTcpEndPoint(serverIp, 10400), plugin);
@@ -136,23 +130,16 @@ namespace HSPI_RACHIOSIID
 
             try
             {
-                // create the user object that is the real plugin, accessed from the pluginAPI wrapper
-                Util.callback = callback;
-                Util.hs = host;
-                plugin.OurInstanceFriendlyName = Util.Instance;
-                // connect to HS so it can register a callback to us
-                host.Connect(Util.IFACE_NAME, Util.Instance);
-                Console.WriteLine("Connected, waiting to be initialized...");
-                do
+                connectionJunction();
+                if(reset)
                 {
-                    System.Threading.Thread.Sleep(10);
-                } while (client.CommunicationState == HSCF.Communication.Scs.Communication.CommunicationStates.Connected & !HSPI.bShutDown);
-                Console.WriteLine("Connection lost, exiting");
-                // disconnect from server for good here
-                client.Disconnect();
-                clientCallback.Disconnect();
-                wait(2);
-                System.Environment.Exit(0);
+                    HSPI.armReset();
+                    goto Reconnect;
+                }
+                else
+                {
+                    System.Environment.Exit(0);
+                }
             }
             catch (Exception ex)
             {
@@ -164,10 +151,48 @@ namespace HSPI_RACHIOSIID
 
         }
 
+        private static void connectionJunction()
+        {
+            // create the user object that is the real plugin, accessed from the pluginAPI wrapper
+            Util.callback = callback;
+            Util.hs = host;
+            plugin.OurInstanceFriendlyName = Util.Instance;
+            // connect to HS so it can register a callback to us
+            host.Connect(Util.IFACE_NAME, Util.Instance);
+            Console.WriteLine("Connected, waiting to be initialized...");
+            do
+            {
+                System.Threading.Thread.Sleep(10);
+            } while (client.CommunicationState == HSCF.Communication.Scs.Communication.CommunicationStates.Connected & !HSPI.bShutDown & !HSPI.timedReset);
+
+            if (!HSPI.bShutDown)
+            {
+                connectionJunction();   // Attempt to reconnect, the disconnection was not intentional
+            }
+            else
+            {
+                Console.WriteLine("Connection lost, exiting");
+                // disconnect from server for good here
+                client.Disconnect();
+                clientCallback.Disconnect();
+                wait(2);
+                
+                if(HSPI.timedReset)
+                {
+                    reset = true;
+                }
+                else
+                {
+                    reset = false;
+                }
+            }
+        }
+
         private static void client_Disconnected(object sender, System.EventArgs e)
         {
             Console.WriteLine("Disconnected from server - client");
         }
+
 
 
         private static void wait(int secs)

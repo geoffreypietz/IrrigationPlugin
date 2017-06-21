@@ -1,204 +1,131 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using RestSharp;
+using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Runtime.Serialization.Json;
-using System.Text;
-using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace HSPI_RACHIOSIID.Models
 {
-    class RachioConnection
+    class RachioConnection : IDisposable
     {
         public string APIKey;
         private string PersonID;
-        private string DeviceID;
+        public string DeviceID;
         public string units;
+        public List<bool> ZoneView;
         public RachioConnection()
         {
             string userPrefs = System.IO.File.ReadAllText(@"Data/hspi_rachiosiid/userprefs.txt");
-            Login Login = getLoginInfo(userPrefs);
-
-
-            if (Login.loggedIn) //POSSIBLE ISSUE
+            using (Login Login = getLoginInfo(userPrefs))
             {
-                APIKey = Login.accessToken;
+                if (Login.loggedIn) //POSSIBLE ISSUE
+                {
+                    APIKey = Login.accessToken;
+                }
+
+                PersonID = getPersonId().id;
+                units = Login.units;
+                ZoneView = new List<bool>();
+                ZoneView = Login.ZoneView;
             }
-
-            PersonID = getPersonId().id;
-            DeviceID = getPerson().devices[0].id;
-            units = Login.units;
-            //Person p = getPerson ();
-
         }
+
         public static Login getLoginInfo(string json)
         {
-            return getJSONAsObject<Login>(json);
+            return JsonConvert.DeserializeObject<Login>(json);
         }
 
-        //Helpers
-        private HttpWebRequest getRequestWithURLGet(string url)
+        //Request
+        private RestRequest getRequestGetOrPut(Method method, string json)
         {
-            HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(url);
-
-
-            request.Method = "GET";
-            request.ContentType = "application/json";
-            request.Accept = "application/json";
-            request.MediaType = "application/json";
-            WebHeaderCollection headers = request.Headers;
-            headers.Add(HttpRequestHeader.Authorization, "Bearer " + APIKey);
-            request.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.NoCacheNoStore);
-            return request;
-        }
-        private HttpWebRequest getRequestWithURLPut(string url)
-        {
-            HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(url);
-            request.Method = "PUT";
-            request.ContentType = "application/json";
-            request.Accept = "application/json";
-            request.MediaType = "application/json";
-            WebHeaderCollection headers = request.Headers;
-            headers.Add(HttpRequestHeader.Authorization, "Bearer " + APIKey);
-            request.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.NoCacheNoStore);
+            var request = new RestRequest(method);
+            request.RequestFormat = DataFormat.Json;
+            request.AddHeader("authorization", "Bearer " + APIKey);
+            request.AddHeader("content-type", "text/json");
+            if (json != null)
+            {
+                request.AddParameter("text/json", json, ParameterType.RequestBody);
+            }
             return request;
         }
 
-        private string getResponseJson(HttpWebRequest request)
-        {
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-            string json;
-            var responseStream = response.GetResponseStream();
-            var streamReader = new StreamReader(responseStream);
-            json = streamReader.ReadToEnd();
-            responseStream.Close();
-            streamReader.Close();
-            response.Close();
-            Console.Write(json);
-            return json;
-        }
-        //JSON
-        private void addJsonToRequest(HttpWebRequest request, string json)
-        {
-
-            byte[] bdata = System.Text.Encoding.UTF8.GetBytes(json);
-            request.ContentLength = bdata.Length;
-            Stream write = request.GetRequestStream();
-            write.Write(bdata, 0, bdata.Length);
-            write.Close();
-        }
-        private T getResponseAsObject<T>(HttpWebRequest request)
-        {
-            WebResponse response = request.GetResponse();
-
-            DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(T));
-            var stream = response.GetResponseStream();
-            object responseObject = serializer.ReadObject(stream);
-            response.Close();
-            stream.Close();
-            T obj = (T)responseObject;
-            return obj;
-        }
-        private static T getJSONAsObject<T>(string json)
-        {
-            DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(T));
-
-            System.IO.Stream stream = new MemoryStream(Encoding.Default.GetBytes(json));
-            object responseObject = serializer.ReadObject(stream);
-            stream.Close();
-            T obj = (T)responseObject;
-            return obj;
-        }
-        //API Methods
+        // GET
         public PersonId getPersonId()
         {
-            HttpWebRequest request = getRequestWithURLGet("https://api.rach.io/1/public/person/info");
-            return getResponseAsObject<PersonId>(request);
-        }        
-        public void turnOnZoneIDForTime(string zoneID, double duration)
-        {
-            HttpWebRequest request = getRequestWithURLPut("https://api.rach.io/1/public/zone/start");
-            addJsonToRequest(request, "{\"id\" : \"" + zoneID + "\", \"duration\" : " + duration + "}");
-            getResponseJson(request);
-        }
-        public void stopWaterForDevice(string deviceID)
-        {
-            HttpWebRequest request = getRequestWithURLPut("https://api.rach.io/1/public/device/stop_water");
-            addJsonToRequest(request, "{\"id\" : \"" + deviceID + "\"}");
-            getResponseJson(request);
+            var client = new RestClient("https://api.rach.io/1/public/person/info");
+            client.FollowRedirects = false;
+            var request = getRequestGetOrPut(Method.GET, null);
+            IRestResponse initial_response = client.Execute(request);
+
+            return JsonConvert.DeserializeObject<PersonId>(initial_response.Content);
         }
         public Person getPerson()
         {
-            HttpWebRequest request = getRequestWithURLGet("https://api.rach.io/1/public/person/" + PersonID);
-            return getResponseAsObject<Person>(request);
+            var client = new RestClient("https://api.rach.io/1/public/person/" + PersonID);
+            client.FollowRedirects = false;
+            var request = getRequestGetOrPut(Method.GET, null);
+            IRestResponse initial_response = client.Execute(request);
+
+            return JsonConvert.DeserializeObject<Person>(initial_response.Content);
         }
         public Current_Schedule getCurrentSchedule()
         {
-            HttpWebRequest request = getRequestWithURLGet("https://api.rach.io/1/public/device/" + DeviceID + "/current_schedule");
-            return getResponseAsObject<Current_Schedule>(request);
+            var client = new RestClient("https://api.rach.io/1/public/device/" + DeviceID + "/current_schedule");
+            client.FollowRedirects = false;
+            var request = getRequestGetOrPut(Method.GET, null);
+            IRestResponse initial_response = client.Execute(request);
+
+            return JsonConvert.DeserializeObject<Current_Schedule>(initial_response.Content);
         }
-        public StartEndTime getStartEndTime(string start, string end)
+        public TotalForecast getTotalForecast()
         {
-            HttpWebRequest request = getRequestWithURLGet("https://api.rach.io/1/public/device/" + DeviceID + "/event?startTime=" + start + "&endTime=" + end);
-            return getResponseAsObject<StartEndTime>(request);
+            var client = new RestClient("https://api.rach.io/1/public/device/" + DeviceID + "/forecast?units=" + units);
+            client.FollowRedirects = false;
+            var request = getRequestGetOrPut(Method.GET, null);
+            IRestResponse initial_response = client.Execute(request);
+
+            return JsonConvert.DeserializeObject<TotalForecast>(initial_response.Content);
         }
-        public CurrentWeather getCurrentWeather()
+
+        // PUT
+        public void setApiJson(string json, string urlAddon)
         {
-            HttpWebRequest request = getRequestWithURLGet("https://api.rach.io/1/public/device/" + DeviceID + "/forecast?units=" + units);
-            return getResponseAsObject<CurrentWeather>(request);
+            var client = new RestClient("https://api.rach.io/1/public/" + urlAddon);
+            client.FollowRedirects = false;
+            var request = getRequestGetOrPut(Method.PUT, json);
+            IRestResponse initial_response = client.Execute(request);
         }
-        //API addons
-        public double getTimeRemainingForZone(Zone z)
+
+        // Disposable Interface
+        public bool Disposed { get; private set; }
+
+        public void Dispose()
         {
-            Current_Schedule cs = getCurrentSchedule();
-            if (cs != null && cs.zoneId != null && cs.zoneId != "" && cs.zoneId == z.id)
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~RachioConnection()
+        {
+            Debug.Assert(Disposed, "WARNING: Object finalized without being disposed!");
+            Dispose(false);
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (!Disposed)
             {
-                TimeSpan unixTime = DateTime.UtcNow - new DateTime(1970, 1, 1);
-                double secondsSinceEpoch = (double)unixTime.TotalSeconds;
-                return cs.zoneStartDate / 1000 + cs.duration - secondsSinceEpoch;
-            }
-            return 0;
-        }
-
-        public double getLastWateredForZone(Zone z)
-        {
-            Current_Schedule cs = getCurrentSchedule();
-            if (cs != null && cs.zoneId != null && cs.zoneId != "" && cs.zoneId == z.id)
-            {
-                Console.WriteLine(cs.zoneStartDate);
-                TimeSpan unixTime = DateTime.UtcNow - new DateTime(1970, 1, 1);
-                double secondsSinceEpoch = (double)unixTime.TotalSeconds;
-                return secondsSinceEpoch - cs.zoneStartDate / 1000 + cs.duration;
-            }
-            return 0;
-        }
-
-        public string getStatusForZone(Zone z)
-        {
-            double timeRemaining = getTimeRemainingForZone(z) / 60;
-            timeRemaining = Math.Round(timeRemaining, 1);
-            return (timeRemaining != 0) ? (timeRemaining + " more minutes") : "Off";
-        }
-
-        //Converters
-        public string getZoneIDForZoneNumberInDevice(int zonenumber, int deviceNumber)
-        {
-
-            return getZoneForZoneNumberInDevice(zonenumber, deviceNumber).id;
-        }
-        public Zone getZoneForZoneNumberInDevice(int zonenumber, int deviceNumber)
-        {
-            Person p = getPerson();
-            foreach (Zone z in p.devices[deviceNumber].zones)
-            {
-                if (z.zoneNumber == zonenumber)
+                if (disposing)
                 {
-                    return z;
+                    DisposeManagedResources();
                 }
+
+                DisposeUnmanagedResources();
+                Disposed = true;
             }
-            return new Zone();
         }
 
+        protected virtual void DisposeManagedResources() { }
+        protected virtual void DisposeUnmanagedResources() { }
     }
 }

@@ -1,18 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections;
-using System.Runtime.Serialization;
 using System.Diagnostics;
+using System.Linq;
+using System.Runtime.Serialization;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace HSPI_RACHIOSIID.Models
 {
     [DataContract]
-    public class Person : IDisposable
+    [KnownType(typeof(CurrentWeather))]
+    [KnownType(typeof(Forecast))]
+    class TotalForecast : IDisposable
     {
-        [DataMember(Name = "id")]
-        public string id { get; set; }
-        [DataMember(Name = "devices")]
-        public List<Device> devices { get; set; }
+        [DataMember(Name = "current")]
+        public CurrentWeather currentW { get; set; }
+        [DataMember(Name = "forecast")]
+        public List<Forecast> forecastList { get; set; }
 
         public bool Disposed { get; private set; }
 
@@ -22,7 +26,7 @@ namespace HSPI_RACHIOSIID.Models
             GC.SuppressFinalize(this);
         }
 
-        ~Person()
+        ~TotalForecast()
         {
             Debug.Assert(Disposed, "WARNING: Object finalized without being disposed!");
             Dispose(false);
@@ -45,6 +49,4 @@ namespace HSPI_RACHIOSIID.Models
         protected virtual void DisposeManagedResources() { }
         protected virtual void DisposeUnmanagedResources() { }
     }
-
 }
-

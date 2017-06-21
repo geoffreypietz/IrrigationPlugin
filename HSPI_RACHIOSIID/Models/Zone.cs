@@ -16,25 +16,16 @@ namespace HSPI_RACHIOSIID.Models
         public string name { get; set; }
         [DataMember(Name = "enabled")]
         public bool enabled { get; set; }
-        //[DataMember(Name = "customNozzle")]
-        //public Object customNozzle { get; set; }
-        [DataMember(Name = "availableWater")]
-        public double availableWater { get; set; }
-        [DataMember(Name = "rootZoneDepth")]
-        public double rootZoneDepth { get; set; }
-        [DataMember(Name = "managementAllowedDepletion")]
-        public double managementAllowedDepletion { get; set; }
-        [DataMember(Name = "efficiency")]
-        public double efficiency { get; set; }
-        [DataMember(Name = "yardAreaSquareFeet")]
-        public double yardAreaSquareFeet { get; set; }
-        [DataMember(Name = "depthOfWater")]
-        public double depthOfWater { get; set; }
-        [DataMember(Name = "adjustedManagementAllowedDepletion")]
-        public double adjustedManagementAllowedDepletion { get; set; }
+        [DataMember(Name = "imageUrl")]
+        public string imageUrl { get; set; }
+        [DataMember(Name = "lastWateredDuration")]
+        public double lastWateredDuration { get; set; }
+        [DataMember(Name = "lastWateredDate")]
+        public double lastWateredDate { get; set; }
+        [DataMember(Name = "maxRuntime")]
+        public double maxRuntime { get; set; }
         [DataMember(Name = "runtime")]
-        public int runtime { get; set; }
-
+        public double runtime { get; set; }
 
     }
 }
