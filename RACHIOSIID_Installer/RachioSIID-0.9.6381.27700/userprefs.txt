@@ -1,0 +1,1 @@
+{"loggedIn":true,"accessToken":"8648ebf5-70cf-4e0b-9db1-c558a6034d18","units":"US","updateFrequency":1,"loggingLevel":"Off","ZoneView":[true,true,true,true,false,false,false,false,false,false,false,false,false,false,false,false]}

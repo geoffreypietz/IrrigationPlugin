@@ -23,7 +23,7 @@ namespace HSPI_RACHIOSIID
 
         public OptionsPage(string pagename) : base(pagename)
         {
-
+            //Could use host.SaveINISettings / GetINISetting to store this information with Homeseer
             string userPrefs = System.IO.File.ReadAllText(@"Data/hspi_rachiosiid/userprefs.txt");
             using (Login Login = RachioConnection.getLoginInfo(userPrefs))
             {

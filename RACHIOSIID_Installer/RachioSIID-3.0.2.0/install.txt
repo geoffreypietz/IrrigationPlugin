@@ -1,0 +1,7 @@
+,[CHECKVERSION],0.8.0.0
+style.css,.\html\hspi_rachiosiid\css,0
+userprefs.txt,.\Data\hspi_rachiosiid,16
+debug.txt,.\Data\hspi_rachiosiid,16
+HSPI_RACHIOSIID.exe,.,0
+HSPI_RACHIOSIID.exe.config,.,16
+HSPI_RACHIOSIID.zip,[UNZIPOVER],./Bin/
