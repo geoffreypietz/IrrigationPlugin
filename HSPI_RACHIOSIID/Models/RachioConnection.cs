@@ -15,24 +15,32 @@ namespace HSPI_RACHIOSIID.Models
         public List<bool> ZoneView;
         public RachioConnection()
         {
-            string userPrefs = System.IO.File.ReadAllText(@"Data/hspi_rachiosiid/userprefs.txt");
-            using (Login Login = getLoginInfo(userPrefs))
+            string json = Util.hs.GetINISetting("RACHIO", "login", "", Util.IFACE_NAME + ".ini");
+            using (Login Login = getLoginInfo(json))
             {
-                if (Login.loggedIn) //POSSIBLE ISSUE
+                if (Login != null)
                 {
-                    APIKey = Login.accessToken;
-                }
+                    if (Login.loggedIn) //POSSIBLE ISSUE
+                    {
+                        APIKey = Login.accessToken;
+                    }
 
-                PersonID = getPersonId().id;
-                units = Login.units;
-                ZoneView = new List<bool>();
-                ZoneView = Login.ZoneView;
+                    PersonID = getPersonId().id;
+                    units = Login.units;
+                    ZoneView = new List<bool>();
+                    ZoneView = Login.ZoneView;
+                }
             }
         }
 
         public static Login getLoginInfo(string json)
         {
             return JsonConvert.DeserializeObject<Login>(json);
+        }
+
+        public bool HasAccessToken()
+        {
+            return !string.IsNullOrEmpty(APIKey);
         }
 
         //Request

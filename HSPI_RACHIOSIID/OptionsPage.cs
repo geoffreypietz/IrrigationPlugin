@@ -23,30 +23,31 @@ namespace HSPI_RACHIOSIID
 
         public OptionsPage(string pagename) : base(pagename)
         {
-            //Could use host.SaveINISettings / GetINISetting to store this information with Homeseer
-            string userPrefs = System.IO.File.ReadAllText(@"Data/hspi_rachiosiid/userprefs.txt");
-            using (Login Login = RachioConnection.getLoginInfo(userPrefs))
+            string json = Util.hs.GetINISetting("RACHIO", "login", "", Util.IFACE_NAME + ".ini");
+            using (Login Login = RachioConnection.getLoginInfo(json))
             {
-                this.apiKey = Login.accessToken;
-                this.unitType = Login.units;
-                this.updateInterval = Login.updateFrequency;
-                this.loggingType = Login.loggingLevel;
-                ZoneChecks = new List<bool>();
-
-                if (Login.ZoneView == null)
+                if (Login != null)
                 {
+                    this.apiKey = Login.accessToken;
+                    this.unitType = Login.units;
+                    this.updateInterval = Login.updateFrequency;
+                    this.loggingType = Login.loggingLevel;
+                    ZoneChecks = new List<bool>();
 
-                    for (int i = 0; i < 16; i++)
+                    if (Login.ZoneView == null)
                     {
-                        ZoneChecks.Add(true);
+
+                        for (int i = 0; i < 16; i++)
+                        {
+                            ZoneChecks.Add(true);
+                        }
+                    }
+                    else
+                    {
+
+                        ZoneChecks = Login.ZoneView;
                     }
                 }
-                else
-                {
-
-                    ZoneChecks = Login.ZoneView;
-                }
-
             }
         }
 
@@ -122,7 +123,7 @@ namespace HSPI_RACHIOSIID
                 {
                     string json = JsonConvert.SerializeObject(login);
                     Console.WriteLine(json);
-                    System.IO.File.WriteAllText(@"Data/hspi_rachiosiid/userprefs.txt", json);
+                    Util.hs.SaveINISetting("RACHIO", "login", json, Util.IFACE_NAME + ".ini");
                     Console.WriteLine("Saved Preferences");
                 }
                 return base.postBackProc(page, data, user, userRights);
@@ -170,7 +171,7 @@ namespace HSPI_RACHIOSIID
                 }*/
 
                 this.AddHeader(Util.hs.GetPageHeader(pageName, Util.IFACE_NAME, "", "", false, true));
-                pluginSB.Append("<link rel = 'stylesheet' href = 'hspi_rachiosiid/css/style.css' type = 'text/css' /><br>");
+                //pluginSB.Append("<link rel = 'stylesheet' href = 'hspi_rachiosiid/css/style.css' type = 'text/css' /><br>");
                 //page.AddHeader(pluginSB.ToString());
 
 
@@ -192,6 +193,8 @@ namespace HSPI_RACHIOSIID
                 //Dim CS As CAPIStatus
                 //CS = dv.GetStatus
 
+                pluginSB.AppendLine("<table class='full_width_table' cellspacing='0' width='100%' >");
+                pluginSB.AppendLine("<tr><td  colspan='1' >");
                 // Status/Options Tabs
 
                 clsJQuery.jqTabs jqtabs = new clsJQuery.jqTabs("optionsTab", this.PageName);
@@ -204,12 +207,12 @@ namespace HSPI_RACHIOSIID
 
                 var optionsString = new StringBuilder();
 
-                optionsString.Append("<table id='optionstable'>");
+                optionsString.Append("<table cellspacing='0' cellpadding='5'  width='100%'>");
 
                 // Rachio API Access Token
-                optionsString.Append("<tr><td class='header' colspan='2'>Rachio API Access Token</td></tr>");
-                optionsString.Append("<tr><td>API Access Token</td>");
-                optionsString.Append("<td>");
+                optionsString.Append("<tr><td class='tableheader' colspan='2'>Rachio API Access Token</td></tr>");
+                optionsString.Append("<tr><td class='tablecell'>API Access Token</td>");
+                optionsString.Append("<td class='tablecell'>");
                 optionsString.Append(PageBuilderAndMenu.clsPageBuilder.FormStart("myform1", "testpage", "post"));
 
 
@@ -236,13 +239,13 @@ namespace HSPI_RACHIOSIID
                 optionsString.Append("</td></tr>");
 
                 // Rachio Options
-                optionsString.Append("<tr><td class='header' colspan='2'>Rachio Options</td></tr>");
+                optionsString.Append("<tr><td class='tableheader' colspan='2'>Rachio Options</td></tr>");
 
-                optionsString.Append("<tr><td>Unit Type</td>");
-                optionsString.Append("<td>");
+                optionsString.Append("<tr><td class='tablecell'>Unit Type</td>");
+                optionsString.Append("<td class='tablecell'>");
                 clsJQuery.jqDropList dl = new clsJQuery.jqDropList("unitType", this.PageName, false);
                 dl.toolTip = "Select your preferred units.";
-                if (unitType.Equals("US"))
+                if (unitType == null || unitType.Equals("US"))
                 {
                     dl.AddItem("U.S. customary  units (miles, °F, etc...)", "1", true);
                     dl.AddItem("Metric system units (kms, °C, etc...)", "2", false);
@@ -258,8 +261,8 @@ namespace HSPI_RACHIOSIID
                 clsJQuery.jqDropList dl2 = new clsJQuery.jqDropList("updateInterval", this.PageName, false);
                 optionsString.Append("</td></tr>");
 
-                optionsString.Append("<tr><td>Update Frequency</td>");
-                optionsString.Append("<td>");
+                optionsString.Append("<tr><td class='tablecell'>Update Frequency</td>");
+                optionsString.Append("<td class='tablecell'>");
                 dl2.toolTip = "Specify how often RachioSIID receives updates from the Rachio API servers.";
 
                 for (int i = 1; i < 61; i++)
@@ -272,8 +275,8 @@ namespace HSPI_RACHIOSIID
 
                 optionsString.Append("</td></tr>");
 
-                optionsString.Append("<tr><td>Zones View</td>");
-                optionsString.Append("<td>");
+                optionsString.Append("<tr><td class='tablecell'>Zones View</td>");
+                optionsString.Append("<td class='tablecell'>");
                 optionsString.Append(PageBuilderAndMenu.clsPageBuilder.FormStart("myform2", "testpage", "post"));
 
                 clsJQuery.jqOverlay ol2 = new clsJQuery.jqOverlay("ov2", this.PageName, false, "events_overlay");
@@ -361,9 +364,9 @@ namespace HSPI_RACHIOSIID
                 optionsString.Append("</td></tr>");*/
 
                 // Applications Options
-                optionsString.Append("<tr><td class='header' colspan='2'>Applications Options</td></tr>");
-                optionsString.Append("<tr><td>Logging Level</td>");
-                optionsString.Append("<td>");
+                optionsString.Append("<tr><td class='tableheader' colspan='2'>Applications Options</td></tr>");
+                optionsString.Append("<tr><td class='tablecell'>Logging Level</td>");
+                optionsString.Append("<td class='tablecell'>");
 
                 clsJQuery.jqDropList dl3 = new clsJQuery.jqDropList("loggingType", this.PageName, false);
                 dl3.toolTip = "Specifiy the plugin logging level";
@@ -399,8 +402,7 @@ namespace HSPI_RACHIOSIID
                 jqtabs.tabs.Add(tab);
 
                 pluginSB.Append(jqtabs.Build());
-
-
+                pluginSB.AppendLine("</td></tr></table>");
 
 
                 // container test
