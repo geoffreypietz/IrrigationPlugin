@@ -94,27 +94,24 @@ namespace HSPI_RACHIOSIID
                 if (EN == null)
                     throw new Exception(IFACE_NAME + " failed to get a device enumerator from HomeSeer.");
                 int dvRef;
-                string address;
                 
                 do
                 {
                     dv = EN.GetNext();
                     if (dv == null)
-                    { continue; }
-                    dvRef = dv.get_Ref(hs);
-                    address = dv.get_Address(hs);
-                    
-                    if (address.Contains(IFACE_NAME))
-                    {
-                        var ddp = new DeviceDataPoint(dvRef, address, dv);
-                        deviceList.Add(ddp);
-                    }
+                        continue;
+                    if (dv.get_Interface(null) != IFACE_NAME)
+                        continue;
+                    dvRef = dv.get_Ref(null);
+
+                    var ddp = new DeviceDataPoint(dvRef, dv);
+                    deviceList.Add(ddp);
 
                 } while (!(EN.Finished));
             }
             catch (Exception ex)
             {
-                hs.WriteLog(IFACE_NAME + " Error", "Exception in Find_Create_Devices/Enumerator: " + ex.Message);
+                Log("Exception in Get_Device_List: " + ex.Message, LogType.LOG_TYPE_ERROR);
             }
 
             return deviceList;
@@ -122,32 +119,34 @@ namespace HSPI_RACHIOSIID
 
         static internal void Update_RachioDevice(DeviceDataPoint ddPoint, Device rachioDevice, RachioConnection rachio, Current_Schedule current)
         {
-            var name = ddPoint.address.Split('-')[7];
+            string name;
+            string type;
+            string id = GetDeviceKeys(ddPoint.device, out name, out type);
 
             switch (name)
             {
                 case "Rain Delay":
                     var delay = rachioDevice.rainDelayExpirationDate / 1000 - getNowSinceEpoch();
-                    hs.SetDeviceValueByRef(ddPoint.dvRef, Math.Round(delay / 3600 / 24, 1), false);
+                    hs.SetDeviceValueByRef(ddPoint.dvRef, Math.Round(delay / 3600 / 24, 1), true);
                     break;
                 case "Status":
                     if (rachioDevice.status == "ONLINE")
                     {
-                        hs.SetDeviceValueByRef(ddPoint.dvRef, 1, false);
+                        hs.SetDeviceValueByRef(ddPoint.dvRef, 1, true);
                     }
                     else
                     {
-                        hs.SetDeviceValueByRef(ddPoint.dvRef, 0, false);
+                        hs.SetDeviceValueByRef(ddPoint.dvRef, 0, true);
                     }
                     break;
                 case "Watering State":
                     if (current.status != null)
                     {
-                        hs.SetDeviceValueByRef(ddPoint.dvRef, 2, false);
+                        hs.SetDeviceValueByRef(ddPoint.dvRef, 2, true);
                     }
                     else
                     {
-                        hs.SetDeviceValueByRef(ddPoint.dvRef, 0, false);
+                        hs.SetDeviceValueByRef(ddPoint.dvRef, 0, true);
                     }
                     break;
             }
@@ -155,7 +154,9 @@ namespace HSPI_RACHIOSIID
 
         static internal void Update_Zone(DeviceDataPoint ddPoint, Zone z, RachioConnection rachio, Current_Schedule current)
         {
-            var name = ddPoint.address.Split('-');
+            string name;
+            string type;
+            string id = GetDeviceKeys(ddPoint.device, out name, out type);
 
             if (rachio.ZoneView[z.zoneNumber - 1])
             {
@@ -168,13 +169,12 @@ namespace HSPI_RACHIOSIID
                 //dv.MISC_Set(hs, Enums.dvMISC.HIDDEN);
             }
 
-            switch (name[7])
+            switch (name)
             {
                 case "Control":
                     if (current.zoneId != null)
                     {
-                        var zId = string.Join("-", name.ToList().GetRange(1, 5));
-                        if (current.zoneId.Equals(zId))   // If the time On is greater than zero
+                        if (current.zoneId == id)   // If the time On is greater than zero
                         {
 
                             var timeRemaining = current.zoneStartDate / 1000 + current.duration - getNowSinceEpoch();
@@ -214,10 +214,9 @@ namespace HSPI_RACHIOSIID
 
         static internal void Update_Weather(DeviceDataPoint ddPoint, CurrentWeather currentW, Forecast forecast, RachioConnection rachio)
         {
-
-            VSVGPairs.VSPair SPair = new VSVGPairs.VSPair(ePairStatusControl.Status);
-
-            var name = ddPoint.address.Split('-')[7];
+            string name;
+            string type;
+            string id = GetDeviceKeys(ddPoint.device, out name, out type);
 
             switch (name)
             {
@@ -225,27 +224,26 @@ namespace HSPI_RACHIOSIID
                     {
                         if (currentW != null)
                         {
-                            hs.SetDeviceValueByRef(ddPoint.dvRef, currentW.cloudCover * 100, false);
+                            hs.SetDeviceValueByRef(ddPoint.dvRef, currentW.cloudCover * 100, true);
 
                         }
                         else
                         {
-                            hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.cloudCover * 100, false);
+                            hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.cloudCover * 100, true);
                         }
                         break;
                     }
 
                 case "Dew Point":
                     {
-                        SPair = hs.DeviceVSP_Get(ddPoint.dvRef, -500, ePairStatusControl.Status);
-                        SPair.RangeStatusSuffix = " " + getTemperatureUnits(rachio.units);
+                        ddPoint.device.set_ScaleText(hs, getTemperatureUnits(rachio.units));
                         if (currentW != null)
                         {
-                            hs.SetDeviceValueByRef(ddPoint.dvRef, currentW.dewPoint, false);
+                            hs.SetDeviceValueByRef(ddPoint.dvRef, currentW.dewPoint, true);
                         }
                         else
                         {
-                            hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.dewPoint, false);
+                            hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.dewPoint, true);
                         }
                         break;
                     }
@@ -253,25 +251,24 @@ namespace HSPI_RACHIOSIID
                     {
                         if (currentW != null)
                         {
-                            hs.SetDeviceValueByRef(ddPoint.dvRef, currentW.humidity * 100, false);
+                            hs.SetDeviceValueByRef(ddPoint.dvRef, currentW.humidity * 100, true);
                         }
                         else
                         {
-                            hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.humidity * 100, false);
+                            hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.humidity * 100, true);
                         }
                         break;
                     }
                 case "Precip Intensity":
                     {
-                        SPair = hs.DeviceVSP_Get(ddPoint.dvRef, -500, ePairStatusControl.Status);
-                        SPair.RangeStatusSuffix = " " + getDepthUnits(rachio.units) + "/hr";
+                        ddPoint.device.set_ScaleText(hs, getDepthUnits(rachio.units) + "/hr");
                         if (currentW != null)
                         {
-                            hs.SetDeviceValueByRef(ddPoint.dvRef, currentW.precipIntensity, false);
+                            hs.SetDeviceValueByRef(ddPoint.dvRef, currentW.precipIntensity, true);
                         }
                         else
                         {
-                            hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.precipIntensity, false);
+                            hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.precipIntensity, true);
                         }
                         break;
                     }
@@ -279,77 +276,72 @@ namespace HSPI_RACHIOSIID
                     {
                         if (currentW != null)
                         {
-                            hs.SetDeviceValueByRef(ddPoint.dvRef, currentW.precipProbability * 100, false);
+                            hs.SetDeviceValueByRef(ddPoint.dvRef, currentW.precipProbability * 100, true);
                         }
                         else
                         {
-                            hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.precipProbability * 100, false);
+                            hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.precipProbability * 100, true);
                         }
                         break;
                     }
                 case "Precipitation":
                     {
-                        SPair = hs.DeviceVSP_Get(ddPoint.dvRef, -500, ePairStatusControl.Status);
-                        SPair.RangeStatusSuffix = " " + getDepthUnits(rachio.units);
+                        ddPoint.device.set_ScaleText(hs, getDepthUnits(rachio.units));
                         if (currentW != null)
                         {
-                            hs.SetDeviceValueByRef(ddPoint.dvRef, currentW.precipitation, false);
+                            hs.SetDeviceValueByRef(ddPoint.dvRef, currentW.precipitation, true);
                         }
                         else
                         {
-                            hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.precipitation, false);
+                            hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.precipitation, true);
                         }
                         break;
                     }
                 case "Temperature":
                     {
-                        SPair = hs.DeviceVSP_Get(ddPoint.dvRef, -500, ePairStatusControl.Status);
-                        SPair.RangeStatusSuffix = " " + getTemperatureUnits(rachio.units);
-                        hs.SetDeviceValueByRef(ddPoint.dvRef, currentW.currentTemperature, false);
+                        ddPoint.device.set_ScaleText(hs, getTemperatureUnits(rachio.units));
+                        hs.SetDeviceValueByRef(ddPoint.dvRef, currentW.currentTemperature, true);
                         break;
                     }
                 case "TemperatureMax":
                     {
-                        SPair = hs.DeviceVSP_Get(ddPoint.dvRef, -500, ePairStatusControl.Status);
-                        SPair.RangeStatusSuffix = " " + getTemperatureUnits(rachio.units);
-                        hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.temperatureMax, false);
+                        ddPoint.device.set_ScaleText(hs, getTemperatureUnits(rachio.units));
+                        hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.temperatureMax, true);
                         break;
                     }
                 case "TemperatureMin":
                     {
-                        SPair = hs.DeviceVSP_Get(ddPoint.dvRef, -500, ePairStatusControl.Status);
-                        SPair.RangeStatusSuffix = " " + getTemperatureUnits(rachio.units);
-                        hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.temperatureMin, false);
+                        ddPoint.device.set_ScaleText(hs, getTemperatureUnits(rachio.units));
+                        hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.temperatureMin, true);
                         break;
                     }
                 case "Weather Conditions":
                     {
                         if (currentW != null)
                         {
-                            hs.SetDeviceString(ddPoint.dvRef, currentW.weatherSummary.ToString(), false);
+                            hs.SetDeviceString(ddPoint.dvRef, currentW.weatherSummary.ToString(), true);
                         }
                         else
                         {
-                            hs.SetDeviceString(ddPoint.dvRef, forecast.weatherSummary.ToString(), false);
+                            hs.SetDeviceString(ddPoint.dvRef, forecast.weatherSummary.ToString(), true);
                         }
                         break;
                     }
                 case "Weather Update":
                     {
-                        hs.SetDeviceValueByRef(ddPoint.dvRef, getTimeSince(currentW.time), false);
+                        hs.SetDeviceValueByRef(ddPoint.dvRef, getTimeSince(currentW.time), true);
                         break;
                     }
                 case "Wind Speed":
                     {
-                        SPair = hs.DeviceVSP_Get(ddPoint.dvRef, -500, ePairStatusControl.Status);
-                        SPair.RangeStatusSuffix = " " + getSpeedUnits(rachio.units);
+                        ddPoint.device.set_ScaleText(hs, getSpeedUnits(rachio.units));
                         if (currentW != null)
                         {
-                            hs.SetDeviceValueByRef(ddPoint.dvRef, currentW.windSpeed, false);
+                            hs.SetDeviceValueByRef(ddPoint.dvRef, currentW.windSpeed, true);
                         }
                         else
                         {
-                            hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.windSpeed, false);
+                            hs.SetDeviceValueByRef(ddPoint.dvRef, forecast.windSpeed, true);
                         }
                         break;
                     }
@@ -357,42 +349,44 @@ namespace HSPI_RACHIOSIID
                     {
                         if (currentW != null)
                         {
-                            hs.SetDeviceString(ddPoint.dvRef, currentW.iconUrl, false);
+                            hs.SetDeviceString(ddPoint.dvRef, currentW.iconUrl, true);
                         }
                         else
                         {
-                            hs.SetDeviceString(ddPoint.dvRef, forecast.iconUrl, false);
+                            hs.SetDeviceString(ddPoint.dvRef, forecast.iconUrl, true);
                         }
                         break;
                     }
             }
-            hs.DeviceVSP_AddPair(ddPoint.dvRef, SPair);
         }
 
         static internal void Update_ScheduleRule(DeviceDataPoint ddPoint, ScheduleRule schedule, RachioConnection rachio)
         {
-            var name = ddPoint.address.Split('-')[7];
+            string name;
+            string type;
+            string id = GetDeviceKeys(ddPoint.device, out name, out type);
+
             switch (name)
             {
                 case "Seasonal Adjustment":
                     {
-                        hs.SetDeviceValueByRef(ddPoint.dvRef, schedule.seasonalAdjustment, false);
+                        hs.SetDeviceValueByRef(ddPoint.dvRef, schedule.seasonalAdjustment, true);
                         break;
                     }
                 case "Summary":
                     {
-                        hs.SetDeviceString(ddPoint.dvRef, schedule.summary, false);
+                        hs.SetDeviceString(ddPoint.dvRef, schedule.summary, true);
                         break;
                     }
                 case "Status":
                     {
                         if (schedule.enabled)
                         {
-                            hs.SetDeviceValueByRef(ddPoint.dvRef, 1, false);
+                            hs.SetDeviceValueByRef(ddPoint.dvRef, 1, true);
                         }
                         else
                         {
-                            hs.SetDeviceValueByRef(ddPoint.dvRef, 0, false);
+                            hs.SetDeviceValueByRef(ddPoint.dvRef, 0, true);
                         }
                         break;
                     }
@@ -462,9 +456,14 @@ namespace HSPI_RACHIOSIID
         
         static internal bool RachioDevice_Devices(string dString, Device rachioDevice, List<DeviceDataPoint> deviceList, RachioConnection rachio, Current_Schedule current)
         {
+            string name;
+            string id;
+            string type;
+
             foreach (var ddPoint in deviceList)
             {
-                if (ddPoint.address.Contains(rachioDevice.id + "-" + rachioDevice.name + "-" + dString))
+                id = GetDeviceKeys(ddPoint.device, out name, out type);
+                if (id == rachioDevice.id && name == dString && type == "Device")
                 {
                     Update_RachioDevice(ddPoint, rachioDevice, rachio, current);
                     return false;
@@ -472,9 +471,9 @@ namespace HSPI_RACHIOSIID
             }
             
             DeviceClass dv = new DeviceClass();
-            dv = GenericHomeSeerDevice(dv, dString, rachioDevice.name, rachioDevice.id);
+            dv = GenericHomeSeerDevice(dv, dString, rachioDevice.name, rachioDevice.id, "Device");
             var dvRef = dv.get_Ref(hs);
-            var name = dString;
+            id = GetDeviceKeys(dv, out name, out type);
             switch (name)
             {
                 case "Root":
@@ -630,10 +629,14 @@ namespace HSPI_RACHIOSIID
         }
         static internal bool Zone_Devices(string zString, Zone zone, List<DeviceDataPoint> deviceList, RachioConnection rachio, Current_Schedule current)
         {
+            string name;
+            string id;
+            string type;
 
             foreach (var ddPoint in deviceList)
             {
-                if (ddPoint.address.Contains(zone.id + "-" + zone.name + "-" + zString))
+                id = GetDeviceKeys(ddPoint.device, out name, out type);
+                if (id == zone.id && name == zString && type == "Zone")
                 {
                     Update_Zone(ddPoint, zone, rachio, current);
 
@@ -642,9 +645,9 @@ namespace HSPI_RACHIOSIID
             }
 
             DeviceClass dv = new DeviceClass();
-            dv = GenericHomeSeerDevice(dv, zString, zone.name, zone.id);
+            dv = GenericHomeSeerDevice(dv, zString, zone.name, zone.id, "Zone");
             var dvRef = dv.get_Ref(hs);
-            var name = zString;
+            id = GetDeviceKeys(dv, out name, out type);
             switch (name)
             {
                 case "Root":
@@ -847,9 +850,14 @@ namespace HSPI_RACHIOSIID
 
         static internal bool Weather_Forecast_Devices(string personId, string forecastName, string cfString, CurrentWeather currentW, Forecast forecast, List<DeviceDataPoint> deviceList, RachioConnection rachio)
         {
+            string name;
+            string id;
+            string type;
+
             foreach (var ddPoint in deviceList)
             {
-                if (ddPoint.address.Contains(personId + "-" + forecastName + "-" + cfString))
+                id = GetDeviceKeys(ddPoint.device, out name, out type);
+                if (id == personId && name == cfString && type == forecastName)
                 {
                     Update_Weather(ddPoint, currentW, forecast, rachio);
                     return false;
@@ -857,9 +865,9 @@ namespace HSPI_RACHIOSIID
             }
 
             DeviceClass dv = new DeviceClass();
-            dv = GenericHomeSeerDevice(dv, cfString, forecastName, personId);
+            dv = GenericHomeSeerDevice(dv, cfString, forecastName, personId, forecastName);
             var dvRef = dv.get_Ref(hs);
-            var name = cfString;
+            id = GetDeviceKeys(dv, out name, out type);
             switch (name)
             {
                 case "Root":
@@ -926,10 +934,8 @@ namespace HSPI_RACHIOSIID
                         SPair = new VSVGPairs.VSPair(ePairStatusControl.Status);
                         SPair.PairType = VSVGPairs.VSVGPairType.Range;
                         SPair.HasScale = true;
-                        //SPair.RangeStatusSuffix = " " + getTemperatureUnits(rachio.units);
                         SPair.RangeStart = -500;
                         SPair.RangeEnd = 500;
-                        hs.DeviceVSP_AddPair(dvRef, SPair);
 
                         VSVGPairs.VGPair GPair = new VSVGPairs.VGPair();
                         GPair.PairType = VSVGPairs.VSVGPairType.Range;
@@ -937,24 +943,36 @@ namespace HSPI_RACHIOSIID
                         GPair.RangeEnd = 500;
                         if (name.Equals("Dew Point") || name.Equals("Temperature"))
                         {
+                            SPair.RangeStatusSuffix = " °" + VSVGPairs.VSPair.ScaleReplace;
+                            SPair.HasScale = true;
                             GPair.Graphic = "/images/HomeSeer/contemporary/Thermometer-60.png";
                         }
                         else if (name.Equals("Precip Intensity") || name.Equals("Precipitation"))
                         {
+                            SPair.RangeStatusSuffix = " " + VSVGPairs.VSPair.ScaleReplace;
+                            SPair.HasScale = true;
                             GPair.Graphic = "/images/HomeSeer/contemporary/water.gif";
                         }
                         else if (name.Equals("TemperatureMax"))
                         {
+                            SPair.RangeStatusSuffix = " °" + VSVGPairs.VSPair.ScaleReplace;
+                            SPair.HasScale = true;
                             GPair.Graphic = "/images/HomeSeer/contemporary/Thermometer-100.png";
                         }
                         else if (name.Equals("TemperatureMin"))
                         {
+                            SPair.RangeStatusSuffix = " °" + VSVGPairs.VSPair.ScaleReplace;
+                            SPair.HasScale = true;
                             GPair.Graphic = "/images/HomeSeer/contemporary/Thermometer-00.png";
                         }
                         else if (name.Equals("Wind Speed"))
                         {
+                            SPair.RangeStatusSuffix = " " + VSVGPairs.VSPair.ScaleReplace;
+                            SPair.HasScale = true;
                             GPair.Graphic = "/images/HomeSeer/contemporary/fan-state-off.png";
                         }
+
+                        hs.DeviceVSP_AddPair(dvRef, SPair);
                         hs.DeviceVGP_AddPair(dvRef, GPair);
                         break;
                     }
@@ -1032,10 +1050,14 @@ namespace HSPI_RACHIOSIID
 
         static internal bool ScheduleRule_Devices(string schString, ScheduleRule schedule, List<DeviceDataPoint> deviceList, RachioConnection rachio)
         {
+            string name;
+            string id;
+            string type;
 
             foreach (var ddPoint in deviceList)
             {
-                if (ddPoint.address.Contains(schedule.id + "-Schedule Rule " + schedule.name + "-" + schString))
+                id = GetDeviceKeys(ddPoint.device, out name, out type);
+                if (id == schedule.id && name == schString && type == "Schedule Rule")
                 {
                     Update_ScheduleRule(ddPoint, schedule, rachio);
                     return false;
@@ -1043,9 +1065,9 @@ namespace HSPI_RACHIOSIID
             }
 
             DeviceClass dv = new DeviceClass();
-            dv = GenericHomeSeerDevice(dv, schString, "Schedule Rule " + schedule.name, schedule.id);
+            dv = GenericHomeSeerDevice(dv, schString, "Schedule Rule " + schedule.name, schedule.id, "Schedule Rule");
             var dvRef = dv.get_Ref(hs);
-            var name = schString;
+            id = GetDeviceKeys(dv, out name, out type);
             switch (name)
             {
                 case "Root":
@@ -1142,7 +1164,33 @@ namespace HSPI_RACHIOSIID
 
         }
 
-        static internal DeviceClass GenericHomeSeerDevice(DeviceClass dv, string dvName, string dvName_long, string device_id)
+        static internal string GetDeviceKeys(DeviceClass dev, out string name, out string type)
+        {
+            string id = "";
+            name = "";
+            type = "";
+            PlugExtraData.clsPlugExtraData pData = dev.get_PlugExtraData_Get(hs);
+            if (pData != null)
+            {
+                id = (string)pData.GetNamed("id");
+                name = (string)pData.GetNamed("name");
+                type = (string)pData.GetNamed("type");
+            }
+            return id;
+        }
+
+        static internal void SetDeviceKeys(DeviceClass dev, string id, string name, string type)
+        {
+            PlugExtraData.clsPlugExtraData pData = dev.get_PlugExtraData_Get(hs);
+            if (pData == null)
+                pData = new PlugExtraData.clsPlugExtraData();
+            pData.AddNamed("id", id);
+            pData.AddNamed("name", name);
+            pData.AddNamed("type", type);
+            dev.set_PlugExtraData_Set(hs, pData);
+        }
+
+        static internal DeviceClass GenericHomeSeerDevice(DeviceClass dv, string dvName, string dvName_long, string device_id, string type)
         {
             int dvRef;
             Console.WriteLine("Creating Device: " + dvName_long + "-" + dvName);
@@ -1155,8 +1203,9 @@ namespace HSPI_RACHIOSIID
             hs.NewDeviceRef(dvName_long + "-" + dvName);
             dvRef = hs.GetDeviceRefByName(dvName_long + "-" + dvName);
             dv = (DeviceClass)hs.GetDeviceByRef(dvRef);
-            dv.set_Address(hs, IFACE_NAME);
-            dv.set_Code(hs, device_id + "-" + dvName_long + "-" + dvName);
+            dv.set_Address(hs, "");
+            SetDeviceKeys(dv, device_id, dvName, type);
+            //dv.set_Code(hs, device_id + "-" + dvName_long + "-" + dvName);
             dv.set_Location(hs, "Outside");
             dv.set_Location2(hs, "Rachio");
             dv.set_Interface(hs, IFACE_NAME);
@@ -1257,35 +1306,43 @@ namespace HSPI_RACHIOSIID
         static internal void SetAssociatedDevices()
         {
             List<DeviceDataPoint> deviceList = new List<DeviceDataPoint>();
+            string name;
+            string id;
+            string type;
+
             deviceList = Get_Device_List(deviceList);
 
             foreach (var ddPoint in deviceList)
             {
-                var addrParts = ddPoint.address.Split('-').ToList().GetRange(1, 6).ToArray();
-                var addrTest = string.Join("-", addrParts);
 
-                if (ddPoint.address.Contains("Rachio Gen2-Root"))   // True if the Device Root has been found
+                id = GetDeviceKeys(ddPoint.device, out name, out type);
+
+                if (name == "Root" && type == "Device")   // True if the Device Root has been found
                 {
                     ddPoint.device.AssociatedDevice_ClearAll(hs);
 
                     foreach (var aDDPoint in deviceList)
                     {
-                        var aAddr = aDDPoint.device.get_Address(hs);
-                        if (aAddr.Contains(addrTest) && !aAddr.Contains("Root"))
+                        string aName;
+                        string aType;
+                        string aId = GetDeviceKeys(aDDPoint.device, out aName, out aType);
+                        if (aId == id && aType == type && aName != "Root")
                         {
                             ddPoint.device.AssociatedDevice_Add(hs, aDDPoint.device.get_Ref(hs));
                         }
                     }
                 }
 
-                if (ddPoint.address.Contains("Current-Root"))   // True if the Current Weather Root has been found
+                if (name == "Root" && type == "Current")   // True if the Current Weather Root has been found
                 {
                     ddPoint.device.AssociatedDevice_ClearAll(hs);
 
                     foreach (var aDDPoint in deviceList)
                     {
-                        var aAddr = aDDPoint.device.get_Address(hs);
-                        if (aAddr.Contains(addrTest) && !aAddr.Contains("Root"))
+                        string aName;
+                        string aType;
+                        string aId = GetDeviceKeys(aDDPoint.device, out aName, out aType);
+                        if (aId == id && aType == type && aName != "Root")
                         {
                             ddPoint.device.AssociatedDevice_Add(hs, aDDPoint.device.get_Ref(hs));
                         }
@@ -1294,14 +1351,16 @@ namespace HSPI_RACHIOSIID
 
                 for (int i = 0; i < 7; i++)
                 {
-                    if (ddPoint.address.Contains("Day " + i + "-Root"))   // True if the Todays Forecast Root has been found
+                    if (name == "Root" && type == ("Day " + i))   // True if the Todays Forecast Root has been found
                     {
                         ddPoint.device.AssociatedDevice_ClearAll(hs);
 
                         foreach (var aDDPoint in deviceList)
                         {
-                            var aAddr = aDDPoint.device.get_Address(hs);
-                            if (aAddr.Contains(addrTest) && !aAddr.Contains("Root"))
+                            string aName;
+                            string aType;
+                            string aId = GetDeviceKeys(aDDPoint.device, out aName, out aType);
+                            if (aId == id && aType == type && aName != "Root")
                             {
                                 ddPoint.device.AssociatedDevice_Add(hs, aDDPoint.device.get_Ref(hs));
                             }
@@ -1310,28 +1369,32 @@ namespace HSPI_RACHIOSIID
                 }
 
 
-                if (ddPoint.address.Contains("Schedule Rule-Root"))   // True if the Schedule Rule Root has been found
+                if (name == "Root" && type == "Schedule Rule")   // True if the Schedule Rule Root has been found
                 {
                     ddPoint.device.AssociatedDevice_ClearAll(hs);
 
                     foreach (var aDDPoint in deviceList)
                     {
-                        var aAddr = aDDPoint.device.get_Address(hs);
-                        if (aAddr.Contains(addrTest) && !aAddr.Contains("Root"))
+                        string aName;
+                        string aType;
+                        string aId = GetDeviceKeys(aDDPoint.device, out aName, out aType);
+                        if (aId == id && aType == type && aName != "Root")
                         {
                             ddPoint.device.AssociatedDevice_Add(hs, aDDPoint.device.get_Ref(hs));
                         }
                     }
                 }
 
-                if (ddPoint.address.Contains("Root"))   // True if the Zone Root has been found
+                if (name == "Root" && type == "Zone")   // True if the Zone Root has been found
                 {
                     ddPoint.device.AssociatedDevice_ClearAll(hs);
 
                     foreach (var aDDPoint in deviceList)
                     {
-                        var aAddr = aDDPoint.device.get_Address(hs);
-                        if (aAddr.Contains(addrTest) && !aAddr.Contains("Root"))
+                        string aName;
+                        string aType;
+                        string aId = GetDeviceKeys(aDDPoint.device, out aName, out aType);
+                        if (aId == id && aType == type && aName != "Root")
                         {
                             ddPoint.device.AssociatedDevice_Add(hs, aDDPoint.device.get_Ref(hs));
                         }
@@ -1426,11 +1489,11 @@ namespace HSPI_RACHIOSIID
         {
             if (units.Equals("METRIC"))
             {
-                return "°C";
+                return "C";
             }
             else
             {
-                return "°F";
+                return "F";
             }
         }
         static internal string getDepthUnits(string units)

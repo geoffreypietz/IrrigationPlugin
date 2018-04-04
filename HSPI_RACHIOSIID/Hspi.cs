@@ -184,13 +184,20 @@ namespace HSPI_RACHIOSIID
             try
             {
                 using (var rachio = new RachioConnection())
-                {                  
-                    Util.Find_Create_Devices(rachio); 
+                {
+                    if (rachio.HasAccessToken())
+                    {
+                        Util.Find_Create_Devices(rachio);
+                    }
+                    else
+                    {
+                        Util.Log("No Access Token saved", Util.LogType.LOG_TYPE_WARNING);
+                    } 
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Failed");
+                Util.Log(ex.ToString(), Util.LogType.LOG_TYPE_ERROR);
                 System.IO.File.WriteAllText(@"Data/hspi_rachiosiid/debug.txt", ex.ToString());  // Write Exception data to debug.txt
             }
             running = false;
@@ -264,7 +271,7 @@ namespace HSPI_RACHIOSIID
                 // register a generic Util.callback for other plugins to raise to use
                 Util.callback.RegisterGenericEventCB("sample_type", Util.IFACE_NAME, "");
 
-                Util.hs.WriteLog(Util.IFACE_NAME, "InitIO called, plug-in is being initialized...");
+                Util.Log("InitIO called, plug-in is being initialized...", Util.LogType.LOG_TYPE_INFO);
 
 
 
@@ -396,63 +403,71 @@ namespace HSPI_RACHIOSIID
         { 
             foreach (CAPI.CAPIControl CC in colSend)
             {
-                Console.WriteLine("SetIOMulti set value: " + CC.ControlValue.ToString() + "->ref:" + CC.Ref.ToString() + "-" + CC.ControlType + "-" + CC.Label);
-                using (var rachio = new RachioConnection())
+
+                try
                 {
-                    
-                    DeviceClass dv = (DeviceClass)Util.hs.GetDeviceByRef(CC.Ref);
-                    var addr = dv.get_Address(Util.hs);
-                    var addrParts = addr.Split('-').ToList().GetRange(1, 5);
-                    var controlId = string.Join("-", addrParts);
+                    Util.Log("SetIOMulti set value: " + CC.ControlValue.ToString() + "->ref:" + CC.Ref.ToString() + "-" + CC.ControlType + "-" + CC.Label, Util.LogType.LOG_TYPE_ERROR);
+                    using (var rachio = new RachioConnection())
+                    {
+
+                        DeviceClass dv = (DeviceClass)Util.hs.GetDeviceByRef(CC.Ref);
+                        string name;
+                        string type;
+                        string id = Util.GetDeviceKeys(dv, out name, out type);
 
 
-                    //if (CC.ControlType == Enums.CAPIControlType.TextBox_Number)
-                    //{
-                    // Zone Controls
-                    if (CC.ControlValue > 0 && CC.ControlValue <= 180 && addr.Contains("Control"))
-                    {
-                        Console.WriteLine("Zone Running " + CC.ControlValue + " Minutes");
-                        rachio.setApiJson("{\"id\" : \"" + controlId + "\", \"duration\" : " + CC.ControlValue * 60 + "}", "zone/start");
-                    }
-                    // Schedule Rule Controls
-                    if (CC.ControlValue > 0 && CC.ControlValue <= 180 && addr.Contains("Seasonal Adjusment"))
-                    {
-                        rachio.setApiJson("{\"id\" : \"" + controlId + "\", \"adjustment\" : " + CC.ControlValue + "}", "schedulerule/seasonal_adjustment");
-                    }
-                    //}
-                    // Stop Watering Button
-                    //if (CC.ControlType == Enums.CAPIControlType.Button)
-                    //{
-                    if (addr.Contains("Watering State") || CC.Label.Contains("Off"))
-                    {
-                        using (var person = rachio.getPerson())
-                        {                         
-                            rachio.setApiJson("{\"id\" : \"" + person.devices[0].id + "\"}", "device/stop_water"); 
-                        }
-                    }
-                    //}
-
-                    //if (CC.ControlType == Enums.CAPIControlType.Single_Text_from_List)
-                    //{
-                    // Rain Delay
-                    if (addr.Contains("Delay"))
-                    {
-                        rachio.setApiJson("{\"id\" : \"" + controlId + "\", \"duration\" : " + CC.ControlValue * 3600 * 24 + "}", "device/rain_delay");
-                    }
-                    // Device Status
-                    if (addr.Contains("Rachio-Status"))
-                    {
-                        if (CC.ControlValue == 1)
+                        //if (CC.ControlType == Enums.CAPIControlType.TextBox_Number)
+                        //{
+                        // Zone Controls
+                        if (CC.ControlValue > 0 && CC.ControlValue <= 180 && name == "Control")
                         {
-                            rachio.setApiJson("{\"id\" : \"" + controlId + "\"}", "device/on");
+                            Console.WriteLine("Zone Running " + CC.ControlValue + " Minutes");
+                            rachio.setApiJson("{\"id\" : \"" + id + "\", \"duration\" : " + CC.ControlValue * 60 + "}", "zone/start");
                         }
-                        if (CC.ControlValue == 0)
+                        // Schedule Rule Controls
+                        if (CC.ControlValue > 0 && CC.ControlValue <= 180 && name == "Seasonal Adjustment")
                         {
-                            rachio.setApiJson("{\"id\" : \"" + controlId + "\"}", "device/off");
+                            rachio.setApiJson("{\"id\" : \"" + id + "\", \"adjustment\" : " + CC.ControlValue + "}", "schedulerule/seasonal_adjustment");
                         }
-                    }
-                    //}
+                        //}
+                        // Stop Watering Button
+                        //if (CC.ControlType == Enums.CAPIControlType.Button)
+                        //{
+                        if (name == "Watering State" || CC.Label.Contains("Off"))
+                        {
+                            using (var person = rachio.getPerson())
+                            {
+                                rachio.setApiJson("{\"id\" : \"" + person.devices[0].id + "\"}", "device/stop_water");
+                            }
+                        }
+                        //}
 
+                        //if (CC.ControlType == Enums.CAPIControlType.Single_Text_from_List)
+                        //{
+                        // Rain Delay
+                        if (name == "Rain Delay")
+                        {
+                            rachio.setApiJson("{\"id\" : \"" + id + "\", \"duration\" : " + CC.ControlValue * 3600 * 24 + "}", "device/rain_delay");
+                        }
+                        // Device Status
+                        if (name == "Status" && type == "Device")
+                        {
+                            if (CC.ControlValue == 1)
+                            {
+                                rachio.setApiJson("{\"id\" : \"" + id + "\"}", "device/on");
+                            }
+                            if (CC.ControlValue == 0)
+                            {
+                                rachio.setApiJson("{\"id\" : \"" + id + "\"}", "device/off");
+                            }
+                        }
+                        //}
+
+                    }
+                }
+                catch (Exception e)
+                {
+                    Util.Log(e.ToString(), Util.LogType.LOG_TYPE_ERROR);
                 }
             }
             updateStatusValues();
