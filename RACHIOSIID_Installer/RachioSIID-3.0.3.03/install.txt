@@ -1,0 +1,5 @@
+HSPI_RACHIOSIID.exe,.,0
+HSPI_RACHIOSIID.exe.config,.,0
+HSPI_RACHIOSIID.zip,[UNZIPOVER],./bin/
+debug.txt,.\Data\hspi_rachiosiid,16
+RACHIOSIID.ini,.\Config\,16

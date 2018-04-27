@@ -420,10 +420,10 @@ namespace HSPI_RACHIOSIID
                     }
                 }
 
-                if (Find_Create_Weather(p, deviceList, rachio))
+            /*    if (Find_Create_Weather(p, deviceList, rachio)) //Remove RACHIO weather devices 4/27/2018
                 {
                     setAssociate = true;
-                }
+                }*/
 
                 if (Find_Create_ScheduleRules(p, deviceList, rachio))
                 {

@@ -5,6 +5,7 @@ using HSPI_RACHIOSIID.Models;
 using Scheduler.Classes;
 using System.Linq;
 using System.Threading;
+using Newtonsoft.Json;
 
 namespace HSPI_RACHIOSIID
 {
@@ -21,8 +22,12 @@ namespace HSPI_RACHIOSIID
 
         public static bool bShutDown = false;
         public static bool timedReset = false;
-        public static int timedResetCounter = 0;
+        public static int dayOfYear = 0;
         public bool running;
+        public DateTime RanAt;
+        public static PersonId personId = null;
+        public static Person person = null;
+
         
 
         #region "Externally Accessible Methods/Procedures - e.g. Script Commands"
@@ -140,36 +145,43 @@ namespace HSPI_RACHIOSIID
         }
         #region - Timer
         // The Timer dictates when to pull API data and update/create HomeSeer Objects
-        public System.Timers.Timer test_timer = new System.Timers.Timer();
+        public static System.Timers.Timer test_timer = new System.Timers.Timer();
 
         public void start_test_timer()
         {            
             Console.WriteLine("Starting timer...");
+            test_timer = new System.Timers.Timer();
 
             updateStatusValues();
+            string json = Util.hs.GetINISetting("RACHIO", "login", "", Util.IFACE_NAME + ".ini");
+            using (Login Login = JsonConvert.DeserializeObject<Login>(json))
+            {
+                test_timer.Interval = 60000* Login.updateFrequency; // 30 sec frequency 
+            }
 
-            test_timer.Interval = 30000; // 30 sec frequency 
+
+             
 
             Console.WriteLine("Time interval set to " + test_timer.Interval/1000 + " seconds");
 
             test_timer.Enabled = true;
 
-            test_timer.Elapsed += test_timer_Elapsed;
+            test_timer.Elapsed += test_timer_Elapsed; //on reset, this wasn't being cleared correctly
         }
 
         private void test_timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             // Reconnect to HomeSeer every 24 hrs
-            if(timedResetCounter >= 2880)   // True if Timer has been running for 24 hrs, Number of 30 second intervals in a day = 2880
+            if(dayOfYear != DateTime.Now.DayOfYear)   // True if Timer has been running for 24 hrs, Number of 30 second intervals in a day = 2880
             {
-                timedResetCounter = 0;
+                dayOfYear = DateTime.Now.DayOfYear;
                 bShutDown = true;
                 timedReset = true;
             }
             else
             {
-                timedResetCounter++;
-                if (!running)
+                
+                if (!running && (DateTime.Now-RanAt).TotalSeconds>30 ) //possibly hits this twice
                 {
                     System.Threading.Tasks.Task.Factory.StartNew(() => updateStatusValues());
                 }
@@ -180,6 +192,8 @@ namespace HSPI_RACHIOSIID
         #region - UpdateUI
         private void updateStatusValues()
         {
+            RanAt = DateTime.Now;
+         //   Util.Log("updateStatusValues", Util.LogType.LOG_TYPE_WARNING);
             running = true;
             try
             {
@@ -435,10 +449,9 @@ namespace HSPI_RACHIOSIID
                         //{
                         if (name == "Watering State" || CC.Label.Contains("Off"))
                         {
-                            using (var person = rachio.getPerson())
-                            {
-                                rachio.setApiJson("{\"id\" : \"" + person.devices[0].id + "\"}", "device/stop_water");
-                            }
+                            
+                                rachio.setApiJson("{\"id\" : \"" + id + "\"}", "device/stop_water");
+                            
                         }
                         //}
 

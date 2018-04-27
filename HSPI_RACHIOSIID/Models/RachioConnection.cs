@@ -3,6 +3,7 @@ using RestSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace HSPI_RACHIOSIID.Models
 {
@@ -44,7 +45,7 @@ namespace HSPI_RACHIOSIID.Models
         }
 
         //Request
-        private RestRequest getRequestGetOrPut(Method method, string json)
+        private IRestResponse getRequestGetOrPut(Method method, string json, RestClient client)
         {
             var request = new RestRequest(method);
             request.RequestFormat = DataFormat.Json;
@@ -54,43 +55,72 @@ namespace HSPI_RACHIOSIID.Models
             {
                 request.AddParameter("text/json", json, ParameterType.RequestBody);
             }
-            return request;
+
+            IRestResponse initial_response = client.Execute(request);
+            try
+            {
+              var APIcallsLeft=  initial_response.Headers.Where(i => i.Name.ToLower()== "x-ratelimit-remaining").ToList()[0];
+                Util.Log("RACHIOSIID "+ APIcallsLeft.Value.ToString()+" API calls remaining for the day", Util.LogType.LOG_TYPE_INFO);
+
+            }
+            catch (Exception e)
+            {
+                Util.Log(e.Message,Util.LogType.LOG_TYPE_ERROR);
+
+            }
+
+
+
+
+            return initial_response;
         }
 
         // GET
         public PersonId getPersonId()
         {
-            var client = new RestClient("https://api.rach.io/1/public/person/info");
-            client.FollowRedirects = false;
-            var request = getRequestGetOrPut(Method.GET, null);
-            IRestResponse initial_response = client.Execute(request);
 
-            return JsonConvert.DeserializeObject<PersonId>(initial_response.Content);
+            if (HSPI.personId == null)
+            {
+                var client = new RestClient("https://api.rach.io/1/public/person/info");
+                client.FollowRedirects = false;
+              //  Util.Log("personID", Util.LogType.LOG_TYPE_WARNING);
+
+                IRestResponse initial_response = getRequestGetOrPut(Method.GET, null, client);
+                HSPI.personId = JsonConvert.DeserializeObject<PersonId>(initial_response.Content);
+            }
+
+
+            return HSPI.personId;
         }
         public Person getPerson()
         {
-            var client = new RestClient("https://api.rach.io/1/public/person/" + PersonID);
-            client.FollowRedirects = false;
-            var request = getRequestGetOrPut(Method.GET, null);
-            IRestResponse initial_response = client.Execute(request);
+            if (HSPI.person == null)
+            {
+                var client = new RestClient("https://api.rach.io/1/public/person/" + PersonID);
+                client.FollowRedirects = false;
+               // Util.Log("person", Util.LogType.LOG_TYPE_WARNING);
+                var initial_response = getRequestGetOrPut(Method.GET, null, client);
+               
+                HSPI.person = JsonConvert.DeserializeObject<Person>(initial_response.Content);
+            }
 
-            return JsonConvert.DeserializeObject<Person>(initial_response.Content);
+            return HSPI.person;
         }
         public Current_Schedule getCurrentSchedule()
         {
             var client = new RestClient("https://api.rach.io/1/public/device/" + DeviceID + "/current_schedule");
             client.FollowRedirects = false;
-            var request = getRequestGetOrPut(Method.GET, null);
-            IRestResponse initial_response = client.Execute(request);
-
+          //  Util.Log("schedule", Util.LogType.LOG_TYPE_WARNING);
+            IRestResponse initial_response = getRequestGetOrPut(Method.GET, null, client);
+         
             return JsonConvert.DeserializeObject<Current_Schedule>(initial_response.Content);
         }
         public TotalForecast getTotalForecast()
         {
             var client = new RestClient("https://api.rach.io/1/public/device/" + DeviceID + "/forecast?units=" + units);
             client.FollowRedirects = false;
-            var request = getRequestGetOrPut(Method.GET, null);
-            IRestResponse initial_response = client.Execute(request);
+           // Util.Log("forcast", Util.LogType.LOG_TYPE_WARNING);
+            IRestResponse initial_response = getRequestGetOrPut(Method.GET, null, client);
 
             return JsonConvert.DeserializeObject<TotalForecast>(initial_response.Content);
         }
@@ -100,8 +130,8 @@ namespace HSPI_RACHIOSIID.Models
         {
             var client = new RestClient("https://api.rach.io/1/public/" + urlAddon);
             client.FollowRedirects = false;
-            var request = getRequestGetOrPut(Method.PUT, json);
-            IRestResponse initial_response = client.Execute(request);
+     
+            IRestResponse initial_response = getRequestGetOrPut(Method.PUT, json, client);
         }
 
         // Disposable Interface

@@ -8,7 +8,7 @@ using System.Runtime.Serialization;
 namespace HSPI_RACHIOSIID.Models
 {
     [DataContract]
-    class PersonId
+  public class PersonId
     {
         [DataMember(Name = "id")]
         public string id { get; set; }

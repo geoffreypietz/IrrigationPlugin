@@ -84,6 +84,8 @@ namespace HSPI_RACHIOSIID
             {
                 updateInterval = Int16.Parse(data.Substring(33));
                 Console.WriteLine(updateInterval + " minute update interval");
+                HSPI.test_timer.Interval = 60000* updateInterval;
+                Console.WriteLine("Time interval set to " + HSPI.test_timer.Interval / 1000 + " seconds");
 
             }
             Console.WriteLine("3");
