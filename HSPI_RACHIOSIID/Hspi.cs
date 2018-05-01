@@ -234,7 +234,10 @@ namespace HSPI_RACHIOSIID
 
         public string InitIO(string port) //Init plugin
         {
-            Console.WriteLine("InitIO called with parameter port as " + port);
+       
+            dayOfYear = DateTime.Now.DayOfYear; //delays the first reset to the next day,  kind of an iffy solution
+
+        Console.WriteLine("InitIO called with parameter port as " + port);
 
             string[] plugins = Util.hs.GetPluginsList();
             Util.gEXEPath = Util.hs.GetAppPath();
@@ -243,55 +246,57 @@ namespace HSPI_RACHIOSIID
             {
 
                 // create our jquery web page
-                pluginpage = new OptionsPage(WebPageName);
-                // register the page with the HS web server, HS will post back to the WebPage class
-                // "pluginpage" is the URL to access this page
-                // comment this out if you are going to use the GenPage/PutPage API istead
-                if (string.IsNullOrEmpty(Util.Instance))
+
+              //  if (pluginpage == null)
                 {
-                    
-                    Util.hs.RegisterPage(Util.IFACE_NAME, Util.IFACE_NAME, Util.Instance);
+                    pluginpage = new OptionsPage(WebPageName);
+                    // register the page with the HS web server, HS will post back to the WebPage class
+                    // "pluginpage" is the URL to access this page
+                    // comment this out if you are going to use the GenPage/PutPage API istead
+                    if (string.IsNullOrEmpty(Util.Instance))
+                    {
+
+                        Util.hs.RegisterPage(Util.IFACE_NAME, Util.IFACE_NAME, Util.Instance);
+                    }
+                    else
+                    {
+                        Util.hs.RegisterPage(Util.IFACE_NAME + Util.Instance, Util.IFACE_NAME, Util.Instance);
+                    }
+                    Console.WriteLine("Creates options page...");
                 }
-                else
-                {
-                    Util.hs.RegisterPage(Util.IFACE_NAME + Util.Instance, Util.IFACE_NAME, Util.Instance);
-                }
-                Console.WriteLine("Creates options page...");
-                WebPageDesc wpd = new WebPageDesc();
-                // create test page
+                    WebPageDesc wpd = new WebPageDesc();
+                    // create test page
 
 
-                // register a normal page to appear in the HomeSeer menu
+                    // register a normal page to appear in the HomeSeer menu
 
-                wpd.link = Util.IFACE_NAME + Util.Instance;
-                if (!string.IsNullOrEmpty(Util.Instance))
-                {
-                    wpd.linktext = Util.IFACE_NAME + " Page instance " + Util.Instance;
-                }
-                else
-                {
-                    wpd.linktext = Util.IFACE_NAME + " Status/Options";
-                }
-                wpd.page_title = Util.IFACE_NAME + " Status/Options";
-                wpd.plugInName = Util.IFACE_NAME;
-                wpd.plugInInstance = Util.Instance;
-                Util.callback.RegisterLink(wpd);
+                    wpd.link = Util.IFACE_NAME + Util.Instance;
+                    if (!string.IsNullOrEmpty(Util.Instance))
+                    {
+                        wpd.linktext = Util.IFACE_NAME + " Page instance " + Util.Instance;
+                    }
+                    else
+                    {
+                        wpd.linktext = Util.IFACE_NAME + " Status/Options";
+                    }
+                    wpd.page_title = Util.IFACE_NAME + " Status/Options";
+                    wpd.plugInName = Util.IFACE_NAME;
+                    wpd.plugInInstance = Util.Instance;
 
-                // register a normal page to appear in the HomeSeer menu
-
-                // init a speak proxy
-                //Util.callback.RegisterProxySpeakPlug(Util.IFACE_NAME, "")
-
-                // register a generic Util.callback for other plugins to raise to use
-                Util.callback.RegisterGenericEventCB("sample_type", Util.IFACE_NAME, "");
-
-                Util.Log("InitIO called, plug-in is being initialized...", Util.LogType.LOG_TYPE_INFO);
+            
+                    Util.callback.RegisterLink(wpd);
+                    Util.callback.RegisterGenericEventCB("sample_type", Util.IFACE_NAME, "");
 
 
 
-                // register for events from homeseer if a device changes value
-                Util.callback.RegisterEventCB(Enums.HSEvent.VALUE_CHANGE, Util.IFACE_NAME, "");
+                    Util.Log("InitIO called, plug-in is being initialized...", Util.LogType.LOG_TYPE_INFO);
 
+
+
+                    // register for events from homeseer if a device changes value
+                    Util.callback.RegisterEventCB(Enums.HSEvent.VALUE_CHANGE, Util.IFACE_NAME, "");
+                
+                
                 start_test_timer();
 
                 //Util.hs.SaveINISetting("Settings", "test", null, "hspi_HSTouch.ini");
@@ -342,7 +347,9 @@ namespace HSPI_RACHIOSIID
         public string GetPagePlugin(string pageName, string user, int userRights, string queryString)
         {
             //If you have more than one web page, use pageName to route it to the proper GetPagePlugin
-            Console.WriteLine("GetPagePlugin pageName: " + pageName);
+        
+            Util.Log("GetPagePlugin pageName: " + pageName, Util.LogType.LOG_TYPE_INFO);
+
             // get the correct page
             switch (pageName)
             {
