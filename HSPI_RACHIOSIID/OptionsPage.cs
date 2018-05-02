@@ -267,7 +267,7 @@ namespace HSPI_RACHIOSIID
                 optionsString.Append("<td class='tablecell'>");
                 dl2.toolTip = "Specify how often RachioSIID receives updates from the Rachio API servers.";
 
-                for (int i = 1; i < 61; i++)
+                for (int i = 2; i < 61; i++)
                 {
                     dl2.AddItem(i.ToString() + " Minute(s)", i.ToString(), updateInterval == i);
                 }

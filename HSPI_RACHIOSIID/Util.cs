@@ -158,7 +158,7 @@ namespace HSPI_RACHIOSIID
             string type;
             string id = GetDeviceKeys(ddPoint.device, out name, out type);
 
-            if (rachio.ZoneView[z.zoneNumber - 1])
+            if (rachio.ZoneView==null || rachio.ZoneView[z.zoneNumber - 1])
             {
                 hs.DeviceProperty_dvMISC(ddPoint.dvRef, Enums.eDeviceProperty.MISC_Clear, Enums.dvMISC.HIDDEN);
                 //dv.MISC_Clear(hs, Enums.dvMISC.HIDDEN);

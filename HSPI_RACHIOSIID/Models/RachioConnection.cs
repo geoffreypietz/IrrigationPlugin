@@ -94,7 +94,7 @@ namespace HSPI_RACHIOSIID.Models
         }
         public Person getPerson()
         {
-            if (HSPI.person == null)
+          //  if (HSPI.person == null)//Need to do this call because this is how we get zone information
             {
                 var client = new RestClient("https://api.rach.io/1/public/person/" + PersonID);
                 client.FollowRedirects = false;

@@ -154,9 +154,19 @@ namespace HSPI_RACHIOSIID
 
             updateStatusValues();
             string json = Util.hs.GetINISetting("RACHIO", "login", "", Util.IFACE_NAME + ".ini");
+           
             using (Login Login = JsonConvert.DeserializeObject<Login>(json))
             {
-                test_timer.Interval = 60000* Login.updateFrequency; // 30 sec frequency 
+                if (Login == null || Login.updateFrequency == 0)
+                {
+
+                    test_timer.Interval = 120000;
+                }
+                else
+                {
+                    test_timer.Interval = 60000 * Login.updateFrequency; 
+                }
+               
             }
 
 
@@ -171,8 +181,10 @@ namespace HSPI_RACHIOSIID
 
         private void test_timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
+            //I don't see a reason why we need the plugin to do this, it messes up the status page
+            //going to try not doing this -Mark L 5/2/2018
             // Reconnect to HomeSeer every 24 hrs
-            if(dayOfYear != DateTime.Now.DayOfYear)   // True if Timer has been running for 24 hrs, Number of 30 second intervals in a day = 2880
+            if(false)//(dayOfYear != DateTime.Now.DayOfYear)   // True if Timer has been running for 24 hrs, Number of 30 second intervals in a day = 2880
             {
                 dayOfYear = DateTime.Now.DayOfYear;
                 bShutDown = true;
@@ -181,7 +193,7 @@ namespace HSPI_RACHIOSIID
             else
             {
                 
-                if (!running && (DateTime.Now-RanAt).TotalSeconds>30 ) //possibly hits this twice
+                if (!running && (DateTime.Now-RanAt).TotalSeconds>30 ) 
                 {
                     System.Threading.Tasks.Task.Factory.StartNew(() => updateStatusValues());
                 }
@@ -427,7 +439,7 @@ namespace HSPI_RACHIOSIID
 
                 try
                 {
-                    Util.Log("SetIOMulti set value: " + CC.ControlValue.ToString() + "->ref:" + CC.Ref.ToString() + "-" + CC.ControlType + "-" + CC.Label, Util.LogType.LOG_TYPE_ERROR);
+                    Util.Log("SetIOMulti set value: " + CC.ControlValue.ToString() + "->ref:" + CC.Ref.ToString() + "-" + CC.ControlType + "-" + CC.Label, Util.LogType.LOG_TYPE_INFO);
                     using (var rachio = new RachioConnection())
                     {
 
@@ -442,7 +454,9 @@ namespace HSPI_RACHIOSIID
                         // Zone Controls
                         if (CC.ControlValue > 0 && CC.ControlValue <= 180 && name == "Control")
                         {
-                            Console.WriteLine("Zone Running " + CC.ControlValue + " Minutes");
+                            Util.Log("Zone Running " + CC.ControlValue + " Minutes", Util.LogType.LOG_TYPE_INFO);
+
+                         
                             rachio.setApiJson("{\"id\" : \"" + id + "\", \"duration\" : " + CC.ControlValue * 60 + "}", "zone/start");
                         }
                         // Schedule Rule Controls
