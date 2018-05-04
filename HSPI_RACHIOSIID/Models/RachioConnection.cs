@@ -100,8 +100,16 @@ namespace HSPI_RACHIOSIID.Models
                 client.FollowRedirects = false;
                // Util.Log("person", Util.LogType.LOG_TYPE_WARNING);
                 var initial_response = getRequestGetOrPut(Method.GET, null, client);
-               
-                HSPI.person = JsonConvert.DeserializeObject<Person>(initial_response.Content);
+
+                try
+                {
+                    HSPI.person = JsonConvert.DeserializeObject<Person>(initial_response.Content);
+                }
+                catch(Exception e)
+                {
+                    HSPI.personId = null; //may be an issue where the personID in rachio resets with the api reset
+                    Util.Log(e.Message + "\n\n" + initial_response.Content, Util.LogType.LOG_TYPE_ERROR);
+                }
             }
 
             return HSPI.person;

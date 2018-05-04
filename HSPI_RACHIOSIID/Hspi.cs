@@ -157,7 +157,7 @@ namespace HSPI_RACHIOSIID
            
             using (Login Login = JsonConvert.DeserializeObject<Login>(json))
             {
-                if (Login == null || Login.updateFrequency == 0)
+                if (Login == null || Login.updateFrequency == 0 || Login.updateFrequency ==1 )
                 {
 
                     test_timer.Interval = 120000;
@@ -193,7 +193,7 @@ namespace HSPI_RACHIOSIID
             else
             {
                 
-                if (!running && (DateTime.Now-RanAt).TotalSeconds>30 ) 
+                if (!running && (DateTime.Now-RanAt).TotalSeconds>61 ) 
                 {
                     System.Threading.Tasks.Task.Factory.StartNew(() => updateStatusValues());
                 }
@@ -468,18 +468,25 @@ namespace HSPI_RACHIOSIID
                         // Stop Watering Button
                         //if (CC.ControlType == Enums.CAPIControlType.Button)
                         //{
-                        if (name == "Watering State" || CC.Label.Contains("Off"))
+                        //There is not zone/stop_water
+                        if (name == "Watering State" )
                         {
                             
                                 rachio.setApiJson("{\"id\" : \"" + id + "\"}", "device/stop_water");
                             
                         }
+
+                        //stopping a zone may just be starting a zone with time=0 (don't see a zone stop method)
+                        if (CC.Label.Contains("Off")) {
+                            rachio.setApiJson("{\"id\" : \"" + id + "\", \"duration\":0}","zone/start");
+
+                        }
                         //}
 
-                        //if (CC.ControlType == Enums.CAPIControlType.Single_Text_from_List)
-                        //{
-                        // Rain Delay
-                        if (name == "Rain Delay")
+                            //if (CC.ControlType == Enums.CAPIControlType.Single_Text_from_List)
+                            //{
+                            // Rain Delay
+                            if (name == "Rain Delay")
                         {
                             rachio.setApiJson("{\"id\" : \"" + id + "\", \"duration\" : " + CC.ControlValue * 3600 * 24 + "}", "device/rain_delay");
                         }
@@ -504,7 +511,12 @@ namespace HSPI_RACHIOSIID
                     Util.Log(e.ToString(), Util.LogType.LOG_TYPE_ERROR);
                 }
             }
-            updateStatusValues();
+            //wait 5 seconds and then do this
+            Thread.Sleep(5000);
+            if (!running && (DateTime.Now - RanAt).TotalSeconds > 5)
+            {
+                updateStatusValues();
+            }
         }
 
         public void ShutdownIO()
