@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
-namespace HSPI_RACHIOSIID.Models
+namespace HSPI_Rachio_Irrigation_Plugin.Models
 {
     class RachioConnection : IDisposable
     {

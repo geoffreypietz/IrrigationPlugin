@@ -4,7 +4,7 @@ using HomeSeerAPI;
 using HSCF.Communication.Scs.Communication.EndPoints.Tcp;
 using HSCF.Communication.ScsServices.Client;
 
-namespace HSPI_RACHIOSIID
+namespace HSPI_Rachio_Irrigation_Plugin
 {
     class Program
     {

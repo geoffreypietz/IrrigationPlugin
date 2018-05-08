@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HSPI_RACHIOSIID.Models
+namespace HSPI_Rachio_Irrigation_Plugin.Models
 {
     [DataContract]
     class CurrentWeather

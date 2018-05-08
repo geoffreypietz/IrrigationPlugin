@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.Serialization;
 
-namespace HSPI_RACHIOSIID.Models
+namespace HSPI_Rachio_Irrigation_Plugin.Models
 {
     [DataContract]
     [KnownType(typeof(Person))]

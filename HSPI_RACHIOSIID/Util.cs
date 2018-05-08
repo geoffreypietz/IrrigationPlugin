@@ -3,10 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using HomeSeerAPI;
 using Scheduler.Classes;
-using HSPI_RACHIOSIID.Models;
+using HSPI_Rachio_Irrigation_Plugin.Models;
 using System.Linq;
 
-namespace HSPI_RACHIOSIID
+namespace HSPI_Rachio_Irrigation_Plugin
 {
 
     static class Util
@@ -19,7 +19,7 @@ namespace HSPI_RACHIOSIID
         public const int ERR_INIT = 2;
         public static HomeSeerAPI.IHSApplication hs;
         public static HomeSeerAPI.IAppCallbackAPI callback;
-        public const string IFACE_NAME = "RACHIOSIID";
+        public const string IFACE_NAME = "Rachio Irrigation Plugin";
         // set when SupportMultipleInstances is TRUE
         public static string Instance = "";
         public static string gEXEPath = "";

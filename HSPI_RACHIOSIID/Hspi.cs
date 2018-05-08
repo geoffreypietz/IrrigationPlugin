@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using HomeSeerAPI;
-using HSPI_RACHIOSIID.Models;
+using HSPI_Rachio_Irrigation_Plugin.Models;
 using Scheduler.Classes;
 using System.Linq;
 using System.Threading;
 using Newtonsoft.Json;
 
-namespace HSPI_RACHIOSIID
+namespace HSPI_Rachio_Irrigation_Plugin
 {
     public class HSPI : IPlugInAPI
     {
@@ -224,7 +224,7 @@ namespace HSPI_RACHIOSIID
             catch (Exception ex)
             {
                 Util.Log(ex.ToString(), Util.LogType.LOG_TYPE_ERROR);
-                System.IO.File.WriteAllText(@"Data/hspi_rachiosiid/debug.txt", ex.ToString());  // Write Exception data to debug.txt
+                System.IO.File.WriteAllText(@"Data/HSPI_Rachio_Irrigation_Plugin/debug.txt", ex.ToString());  // Write Exception data to debug.txt
             }
             running = false;
         }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.Serialization;
 
-namespace HSPI_RACHIOSIID.Models
+namespace HSPI_Rachio_Irrigation_Plugin.Models
 {
     [DataContract]
     class Login : IDisposable

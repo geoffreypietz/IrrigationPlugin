@@ -7,8 +7,8 @@
     <ProjectGuid>{99F6BA6B-CA9D-4DBE-AC93-D6D643C33ECA}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>HSPI_RACHIOSIID</RootNamespace>
-    <AssemblyName>HSPI_RACHIOSIID</AssemblyName>
+    <RootNamespace>HSPI_Rachio_Irrigation_Plugin</RootNamespace>
+    <AssemblyName>HSPI_Rachio_Irrigation_Plugin</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>

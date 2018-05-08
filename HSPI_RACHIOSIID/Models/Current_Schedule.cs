@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Runtime.Serialization;
 using System.Diagnostics;
 
-namespace HSPI_RACHIOSIID.Models
+namespace HSPI_Rachio_Irrigation_Plugin.Models
 {
     [DataContract]
     public class Current_Schedule : IDisposable

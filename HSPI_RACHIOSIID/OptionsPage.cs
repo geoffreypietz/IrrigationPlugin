@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Text;
 using System.Web;
 using Scheduler;
-using HSPI_RACHIOSIID.Models;
+using HSPI_Rachio_Irrigation_Plugin.Models;
 using static Scheduler.PageBuilderAndMenu;
 using Newtonsoft.Json;
 
 
-namespace HSPI_RACHIOSIID
+namespace HSPI_Rachio_Irrigation_Plugin
 {
     public class OptionsPage : PageBuilderAndMenu.clsPageBuilder
     {
@@ -173,7 +173,7 @@ namespace HSPI_RACHIOSIID
                 }*/
 
                 this.AddHeader(Util.hs.GetPageHeader(pageName, Util.IFACE_NAME, "", "", false, true));
-                //pluginSB.Append("<link rel = 'stylesheet' href = 'hspi_rachiosiid/css/style.css' type = 'text/css' /><br>");
+                //pluginSB.Append("<link rel = 'stylesheet' href = 'HSPI_Rachio_Irrigation_Plugin/css/style.css' type = 'text/css' /><br>");
                 //page.AddHeader(pluginSB.ToString());
 
 
