@@ -1062,6 +1062,7 @@ namespace HSPI_Rachio_Irrigation_Plugin
                     Update_ScheduleRule(ddPoint, schedule, rachio);
                     return false;
                 }
+               
             }
 
             DeviceClass dv = new DeviceClass();
@@ -1193,15 +1194,16 @@ namespace HSPI_Rachio_Irrigation_Plugin
         static internal DeviceClass GenericHomeSeerDevice(DeviceClass dv, string dvName, string dvName_long, string device_id, string type)
         {
             int dvRef;
-            Console.WriteLine("Creating Device: " + dvName_long + "-" + dvName);
+            Log("Creating Device: " + dvName_long + "-" + dvName, LogType.LOG_TYPE_INFO);
+
             var DT = new DeviceTypeInfo_m.DeviceTypeInfo();
             DT.Device_API = DeviceTypeInfo_m.DeviceTypeInfo.eDeviceAPI.Plug_In;
             if (dvName.Contains("Root"))
             {
                 DT.Device_Type = 99;
             }
-            hs.NewDeviceRef(dvName_long + "-" + dvName);
-            dvRef = hs.GetDeviceRefByName(dvName_long + "-" + dvName);
+            dvRef = hs.NewDeviceRef(dvName_long + "-" + dvName);
+           // dvRef = hs.GetDeviceRefByName(dvName_long + "-" + dvName);
             dv = (DeviceClass)hs.GetDeviceByRef(dvRef);
             dv.set_Address(hs, "");
             SetDeviceKeys(dv, device_id, dvName, type);
