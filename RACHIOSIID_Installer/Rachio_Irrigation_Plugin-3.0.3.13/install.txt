@@ -1,0 +1,5 @@
+HSPI_Rachio_Irrigation_Plugin.exe,.,0
+HSPI_Rachio_Irrigation_Plugin.exe.config,.,0
+HSPI_Rachio_Irrigation_Plugin.zip,[UNZIPOVER],./bin/
+debug.txt,.\Data\HSPI_Rachio_Irrigation_Plugin,16
+Rachio Irrigation Plugin.ini,.\Config\,16

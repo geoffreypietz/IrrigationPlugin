@@ -469,9 +469,8 @@ namespace HSPI_Rachio_Irrigation_Plugin
                     return false;
                 } 
             }
-            
-            DeviceClass dv = new DeviceClass();
-            dv = GenericHomeSeerDevice(dv, dString, rachioDevice.name, rachioDevice.id, "Device");
+
+            var dv = GenericHomeSeerDevice(dString, rachioDevice.name, rachioDevice.id, "Device");
             var dvRef = dv.get_Ref(hs);
             id = GetDeviceKeys(dv, out name, out type);
             switch (name)
@@ -644,8 +643,7 @@ namespace HSPI_Rachio_Irrigation_Plugin
                 }
             }
 
-            DeviceClass dv = new DeviceClass();
-            dv = GenericHomeSeerDevice(dv, zString, zone.name, zone.id, "Zone");
+            var dv = GenericHomeSeerDevice(zString, zone.name, zone.id, "Zone");
             var dvRef = dv.get_Ref(hs);
             id = GetDeviceKeys(dv, out name, out type);
             switch (name)
@@ -864,8 +862,7 @@ namespace HSPI_Rachio_Irrigation_Plugin
                 }
             }
 
-            DeviceClass dv = new DeviceClass();
-            dv = GenericHomeSeerDevice(dv, cfString, forecastName, personId, forecastName);
+            var dv = GenericHomeSeerDevice(cfString, forecastName, personId, forecastName);
             var dvRef = dv.get_Ref(hs);
             id = GetDeviceKeys(dv, out name, out type);
             switch (name)
@@ -1065,8 +1062,8 @@ namespace HSPI_Rachio_Irrigation_Plugin
                
             }
 
-            DeviceClass dv = new DeviceClass();
-            dv = GenericHomeSeerDevice(dv, schString, "Schedule Rule " + schedule.name, schedule.id, "Schedule Rule");
+            //    DeviceClass dv = new DeviceClass();
+            DeviceClass dv = GenericHomeSeerDevice(schString, "Schedule Rule " + schedule.name, schedule.id, "Schedule Rule");
             var dvRef = dv.get_Ref(hs);
             id = GetDeviceKeys(dv, out name, out type);
             switch (name)
@@ -1191,7 +1188,7 @@ namespace HSPI_Rachio_Irrigation_Plugin
             dev.set_PlugExtraData_Set(hs, pData);
         }
 
-        static internal DeviceClass GenericHomeSeerDevice(DeviceClass dv, string dvName, string dvName_long, string device_id, string type)
+        static internal DeviceClass GenericHomeSeerDevice( string dvName, string dvName_long, string device_id, string type)
         {
             int dvRef;
             Log("Creating Device: " + dvName_long + "-" + dvName, LogType.LOG_TYPE_INFO);
@@ -1203,8 +1200,9 @@ namespace HSPI_Rachio_Irrigation_Plugin
                 DT.Device_Type = 99;
             }
             dvRef = hs.NewDeviceRef(dvName_long + "-" + dvName);
-           // dvRef = hs.GetDeviceRefByName(dvName_long + "-" + dvName);
-            dv = (DeviceClass)hs.GetDeviceByRef(dvRef);
+
+            // dvRef = hs.GetDeviceRefByName(dvName_long + "-" + dvName);
+            var dv = (DeviceClass)hs.GetDeviceByRef(dvRef);
             dv.set_Address(hs, "");
             SetDeviceKeys(dv, device_id, dvName, type);
             //dv.set_Code(hs, device_id + "-" + dvName_long + "-" + dvName);
