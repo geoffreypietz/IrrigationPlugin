@@ -59,84 +59,104 @@ namespace HSPI_Rachio_Irrigation_Plugin
             parts = HttpUtility.ParseQueryString(data);
             Console.WriteLine(data);
             string id = parts["id"];
-            if (parts["APIToken"] != null)
-            {
-                Console.WriteLine("api");
-                
-                apiKey = parts["APIToken"];
-                Console.WriteLine(apiKey);
-            }
-            Console.WriteLine("1");
-            if (id == "unitType")
-            {
-                if (data.Contains("1"))
-                {
-                    unitType = "US";
-                }
-                else
-                {
-                    unitType = "METRIC";
-                }
 
-            }
-            Console.WriteLine("2");
-            if (id == "updateInterval")
+            if (id == "devices_button")
             {
-                updateInterval = Int16.Parse(data.Substring(33));
-                Console.WriteLine(updateInterval + " minute update interval");
-                HSPI.test_timer.Interval = 60000* updateInterval;
-                Console.WriteLine("Time interval set to " + HSPI.test_timer.Interval / 1000 + " seconds");
-
-            }
-            Console.WriteLine("3");
-            if (id == "loggingType")
-            {
-                if (data == "Off")
+                using (var rachio = new RachioConnection())
                 {
-                    loggingType = "Off";
-                }
-                else
-                {
-                    loggingType = "Debug";
-                }
-
-            }
-            Console.WriteLine("4");
-            if (data.Contains("ZoneCheck"))
-            {
-                if (id.Contains("ZoneCheck"))
-                {
-                    string zString = data.Split('=')[0].Substring(9);
-                    int zNum = Int16.Parse(zString);
-                    if (data.Contains("unchecked"))
+                    if (rachio.HasAccessToken())
                     {
-                        ZoneChecks[zNum - 1] = false;
+                        Util.Find_Create_Devices(rachio);
                     }
                     else
                     {
-                        ZoneChecks[zNum - 1] = true;
+                        Util.Log("No Access Token saved", Util.LogType.LOG_TYPE_WARNING);
                     }
-                } 
-            }
-            try
-            {
-                Console.WriteLine("5");
-                using (var login = new Login(apiKey, unitType, updateInterval, loggingType, ZoneChecks))
-                {
-                    string json = JsonConvert.SerializeObject(login);
-                    Console.WriteLine(json);
-                    Util.hs.SaveINISetting("RACHIO", "login", json, Util.IFACE_NAME + ".ini");
-                    Console.WriteLine("Saved Preferences");
                 }
-                return base.postBackProc(page, data, user, userRights);
             }
-            catch (Exception e)
+            else
             {
 
-                Console.WriteLine(e.StackTrace);
-            }
 
-            return null;
+                if (parts["APIToken"] != null)
+                {
+                    Console.WriteLine("api");
+
+                    apiKey = parts["APIToken"];
+                    Console.WriteLine(apiKey);
+                }
+                Console.WriteLine("1");
+                if (id == "unitType")
+                {
+                    if (data.Contains("1"))
+                    {
+                        unitType = "US";
+                    }
+                    else
+                    {
+                        unitType = "METRIC";
+                    }
+
+                }
+                Console.WriteLine("2");
+                if (id == "updateInterval")
+                {
+                    updateInterval = Int16.Parse(data.Substring(33));
+                    Console.WriteLine(updateInterval + " minute update interval");
+                    HSPI.test_timer.Interval = 60000 * updateInterval;
+                    Console.WriteLine("Time interval set to " + HSPI.test_timer.Interval / 1000 + " seconds");
+
+                }
+                Console.WriteLine("3");
+                if (id == "loggingType")
+                {
+                    if (data == "Off")
+                    {
+                        loggingType = "Off";
+                    }
+                    else
+                    {
+                        loggingType = "Debug";
+                    }
+
+                }
+                Console.WriteLine("4");
+                if (data.Contains("ZoneCheck"))
+                {
+                    if (id.Contains("ZoneCheck"))
+                    {
+                        string zString = data.Split('=')[0].Substring(9);
+                        int zNum = Int16.Parse(zString);
+                        if (data.Contains("unchecked"))
+                        {
+                            ZoneChecks[zNum - 1] = false;
+                        }
+                        else
+                        {
+                            ZoneChecks[zNum - 1] = true;
+                        }
+                    }
+                }
+                try
+                {
+                    Console.WriteLine("5");
+                    using (var login = new Login(apiKey, unitType, updateInterval, loggingType, ZoneChecks))
+                    {
+                        string json = JsonConvert.SerializeObject(login);
+                        Console.WriteLine(json);
+                        Util.hs.SaveINISetting("RACHIO", "login", json, Util.IFACE_NAME + ".ini");
+                        Console.WriteLine("Saved Preferences");
+                    }
+                    return base.postBackProc(page, data, user, userRights);
+                }
+                catch (Exception e)
+                {
+
+                    Console.WriteLine(e.StackTrace);
+                }
+            }
+                return null;
+            
         }
 
 
@@ -239,6 +259,23 @@ namespace HSPI_Rachio_Irrigation_Plugin
                 optionsString.Append(ol.Build());
                 optionsString.Append(PageBuilderAndMenu.clsPageBuilder.FormEnd());
                 optionsString.Append("</td></tr>");
+
+
+                optionsString.Append("<tr><td class='tablecell'>Add Rachio devices to Homeseer</td>");
+
+
+                optionsString.Append("<td class='tablecell'>");
+                optionsString.Append(PageBuilderAndMenu.clsPageBuilder.FormStart("myform1", "testpage", "post"));
+
+
+                optionsString.Append(new clsJQuery.jqButton("devices_button", "Create Homeseer devices", this.PageName, true).Build());
+    
+
+
+                optionsString.Append(PageBuilderAndMenu.clsPageBuilder.FormEnd());
+                optionsString.Append("</td></tr>");
+
+
 
                 // Rachio Options
                 optionsString.Append("<tr><td class='tableheader' colspan='2'>Rachio Options</td></tr>");

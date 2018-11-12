@@ -392,9 +392,12 @@ namespace HSPI_Rachio_Irrigation_Plugin
                     }
             }
         }
-
-        // Initial Method for updating/creating HomeSeer Devices based on Rachio API Data
         static internal void Find_Create_Devices(RachioConnection rachio)
+        {
+            Find_Create_Devices(rachio, true);
+        }
+            // Initial Method for updating/creating HomeSeer Devices based on Rachio API Data
+            static internal void Find_Create_Devices(RachioConnection rachio,bool createDevices)
         {
             var setAssociate = false;
             var deviceList = new List<DeviceDataPoint>();
@@ -409,12 +412,12 @@ namespace HSPI_Rachio_Irrigation_Plugin
                 using (var current = rachio.getCurrentSchedule())
                 {
 
-                    if (Find_Create_RachioDevices(p, deviceList, rachio, current))
+                    if (Find_Create_RachioDevices(p, deviceList, rachio, current, createDevices))
                     {
                         setAssociate = true;    // Set to true if a HomeSeer device is created
                     }
 
-                    if (Find_Create_Zones(p, deviceList, rachio, current))
+                    if (Find_Create_Zones(p, deviceList, rachio, current, createDevices))
                     {
                         setAssociate = true;
                     }
@@ -425,7 +428,7 @@ namespace HSPI_Rachio_Irrigation_Plugin
                     setAssociate = true;
                 }*/
 
-                if (Find_Create_ScheduleRules(p, deviceList, rachio))
+                if (Find_Create_ScheduleRules(p, deviceList, rachio, createDevices))
                 {
                     setAssociate = true;
                 }
@@ -439,7 +442,7 @@ namespace HSPI_Rachio_Irrigation_Plugin
         }
 
         // Rachio Device
-        static internal bool Find_Create_RachioDevices(Person p, List<DeviceDataPoint> deviceList, RachioConnection rachio, Current_Schedule current)
+        static internal bool Find_Create_RachioDevices(Person p, List<DeviceDataPoint> deviceList, RachioConnection rachio, Current_Schedule current, bool createDevices)
         {
             Device rachioDevice = p.devices[0]; // TODO: account for more than one Rachio Device
             bool associates = false;
@@ -447,14 +450,14 @@ namespace HSPI_Rachio_Irrigation_Plugin
 
             foreach (var dString in dStrings)
             {
-                if (RachioDevice_Devices(dString, rachioDevice, deviceList, rachio, current)) // True if a device was created
+                if (RachioDevice_Devices(dString, rachioDevice, deviceList, rachio, current, createDevices)) // True if a device was created
                     associates = true;
             }
 
             return associates;
         }
         
-        static internal bool RachioDevice_Devices(string dString, Device rachioDevice, List<DeviceDataPoint> deviceList, RachioConnection rachio, Current_Schedule current)
+        static internal bool RachioDevice_Devices(string dString, Device rachioDevice, List<DeviceDataPoint> deviceList, RachioConnection rachio, Current_Schedule current, bool createDevices)
         {
             string name;
             string id;
@@ -468,6 +471,11 @@ namespace HSPI_Rachio_Irrigation_Plugin
                     Update_RachioDevice(ddPoint, rachioDevice, rachio, current);
                     return false;
                 } 
+            }
+            if (!createDevices)
+            {
+                Log("Missing Homeseer device: " + dString + " please click on the Create Homeseer devices button on the Rachio plugin configuration page", LogType.LOG_TYPE_WARNING);
+                return false;
             }
 
             var dv = GenericHomeSeerDevice(dString, rachioDevice.name, rachioDevice.id, "Device");
@@ -603,7 +611,7 @@ namespace HSPI_Rachio_Irrigation_Plugin
 
         }
 
-        static internal bool Find_Create_Zones(Person p, List<DeviceDataPoint> deviceList, RachioConnection rachio, Current_Schedule current)
+        static internal bool Find_Create_Zones(Person p, List<DeviceDataPoint> deviceList, RachioConnection rachio, Current_Schedule current, bool createDevice)
         {
             bool create;
             bool associates = false;
@@ -616,7 +624,7 @@ namespace HSPI_Rachio_Irrigation_Plugin
                 {
                     foreach (var zString in zStrings)
                     {
-                        create = Zone_Devices(zString, zone, deviceList, rachio, current);
+                        create = Zone_Devices(zString, zone, deviceList, rachio, current, createDevice);
                         if (create) // True if a device was created
                             associates = true;
                     } 
@@ -626,7 +634,7 @@ namespace HSPI_Rachio_Irrigation_Plugin
 
             return associates;
         }
-        static internal bool Zone_Devices(string zString, Zone zone, List<DeviceDataPoint> deviceList, RachioConnection rachio, Current_Schedule current)
+        static internal bool Zone_Devices(string zString, Zone zone, List<DeviceDataPoint> deviceList, RachioConnection rachio, Current_Schedule current, bool createDevices)
         {
             string name;
             string id;
@@ -641,6 +649,11 @@ namespace HSPI_Rachio_Irrigation_Plugin
 
                     return false;
                 }
+            }
+            if (!createDevices)
+            {
+                Log("Missing Homeseer device: " + zString + " please click on the Create Homeseer devices button on the Rachio plugin configuration page", LogType.LOG_TYPE_WARNING);
+                return false;
             }
 
             var dv = GenericHomeSeerDevice(zString, zone.name, zone.id, "Zone");
@@ -1013,7 +1026,7 @@ namespace HSPI_Rachio_Irrigation_Plugin
             return true;
         }
 
-        static internal bool Find_Create_ScheduleRules(Person p, List<DeviceDataPoint> deviceList, RachioConnection rachio)
+        static internal bool Find_Create_ScheduleRules(Person p, List<DeviceDataPoint> deviceList, RachioConnection rachio, bool createDevices)
         {
             ScheduleRule schedule = null;
             bool create;
@@ -1026,7 +1039,7 @@ namespace HSPI_Rachio_Irrigation_Plugin
                 schedule = item;
                 foreach (var schString in schStrings)
                 {
-                    create = ScheduleRule_Devices(schString, schedule, deviceList, rachio);
+                    create = ScheduleRule_Devices(schString, schedule, deviceList, rachio, createDevices);
                     if (create) // True if a device was created
                         associates = true;
                 }
@@ -1036,7 +1049,7 @@ namespace HSPI_Rachio_Irrigation_Plugin
                 schedule = item;
                 foreach (var schString in schStrings)
                 {
-                    create = ScheduleRule_Devices(schString, schedule, deviceList, rachio);
+                    create = ScheduleRule_Devices(schString, schedule, deviceList, rachio, createDevices);
                     if (create) // True if a device was created
                         associates = true;
                 }
@@ -1045,7 +1058,7 @@ namespace HSPI_Rachio_Irrigation_Plugin
             return associates;
         }
 
-        static internal bool ScheduleRule_Devices(string schString, ScheduleRule schedule, List<DeviceDataPoint> deviceList, RachioConnection rachio)
+        static internal bool ScheduleRule_Devices(string schString, ScheduleRule schedule, List<DeviceDataPoint> deviceList, RachioConnection rachio, bool createDevices)
         {
             string name;
             string id;
@@ -1061,9 +1074,14 @@ namespace HSPI_Rachio_Irrigation_Plugin
                 }
                
             }
+            if (!createDevices)
+            {
+                Log("Missing Homeseer device: " + schString + " please click on the Create Homeseer devices button on the Rachio plugin configuration page", LogType.LOG_TYPE_WARNING);
+                return false;
+            }
 
             //    DeviceClass dv = new DeviceClass();
-            DeviceClass dv = GenericHomeSeerDevice(schString, "Schedule Rule " + schedule.name, schedule.id, "Schedule Rule");
+                DeviceClass dv = GenericHomeSeerDevice(schString, "Schedule Rule " + schedule.name, schedule.id, "Schedule Rule");
             var dvRef = dv.get_Ref(hs);
             id = GetDeviceKeys(dv, out name, out type);
             switch (name)

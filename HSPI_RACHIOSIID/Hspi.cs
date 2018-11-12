@@ -213,7 +213,7 @@ namespace HSPI_Rachio_Irrigation_Plugin
                 {
                     if (rachio.HasAccessToken())
                     {
-                        Util.Find_Create_Devices(rachio);
+                        Util.Find_Create_Devices(rachio, false);
                     }
                     else
                     {
