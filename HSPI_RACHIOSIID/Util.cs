@@ -695,15 +695,15 @@ namespace HSPI_Rachio_Irrigation_Plugin
                         SPair.RangeEnd = 180;
                         SPair.RangeStatusSuffix = " minutes remaining";
                         hs.DeviceVSP_AddPair(dvRef, SPair);
-
-                        SPair = new VSVGPairs.VSPair(HomeSeerAPI.ePairStatusControl.Control);
+//No API way to stop watering a zone
+                      /*  SPair = new VSVGPairs.VSPair(HomeSeerAPI.ePairStatusControl.Control);
                         SPair.PairType = VSVGPairs.VSVGPairType.SingleValue;
                         SPair.Render = Enums.CAPIControlType.Button;
                         SPair.Render_Location.Row = 1;
                         SPair.Render_Location.Column = 3;
                         SPair.Status = "Off";
                         SPair.Value = 0;
-                        hs.DeviceVSP_AddPair(dvRef, SPair);
+                        hs.DeviceVSP_AddPair(dvRef, SPair);*/
 
                         SPair.PairType = VSVGPairs.VSVGPairType.Range;
                         SPair.Render = Enums.CAPIControlType.TextBox_Number;
